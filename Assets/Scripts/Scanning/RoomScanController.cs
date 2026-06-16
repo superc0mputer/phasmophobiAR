@@ -288,13 +288,12 @@ namespace PhasmophobiAR.Scanning
             }
 
             var baseProgress =
-                movementProgress * 0.35f +
-                lookProgress * 0.25f +
+                movementProgress * 0.4f +
+                lookProgress * 0.3f +
                 planeProgress * 0.15f +
-                timeProgress * stableProgress * 0.15f +
-                roomSignalProgress * 0.1f;
+                timeProgress * stableProgress * 0.15f;
 
-            var targetProgress = Mathf.Clamp01(baseProgress);
+            var targetProgress = Mathf.Clamp01(baseProgress + roomSignalProgress * 0.1f);
 
             if (m_Confidence == TrackingConfidence.Good)
                 m_Progress = Mathf.Max(m_Progress, targetProgress);
