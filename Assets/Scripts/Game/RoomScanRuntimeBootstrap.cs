@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PhasmophobiAR.Ghosts;
+using PhasmophobiAR.Markers;
 using PhasmophobiAR.Scanning;
 using PhasmophobiAR.Tools;
 using PhasmophobiAR.UI;
@@ -8,6 +9,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Unity.XR.CoreUtils;
 using UnityEngine.XR.ARFoundation;
 
 namespace PhasmophobiAR.Game
@@ -37,6 +39,8 @@ namespace PhasmophobiAR.Game
             var pointCloudManager = UnityEngine.Object.FindFirstObjectByType<ARPointCloudManager>();
             var meshManager = UnityEngine.Object.FindFirstObjectByType<ARMeshManager>();
             var occlusionManager = UnityEngine.Object.FindFirstObjectByType<AROcclusionManager>();
+            var trackedImageManager = GetOrCreateTrackedImageManager();
+            var toolDefinitions = MarkerToolDefaults.CreateDefinitions();
 
             var scanController = root.AddComponent<RoomScanController>();
             scanController.Configure(gameStateManager, arCamera, planeManager, pointCloudManager, meshManager, occlusionManager);
@@ -46,6 +50,25 @@ namespace PhasmophobiAR.Game
 
             CreateHud(root.transform, gameStateManager, scanController);
             GateTemplatePlacement(root.transform, gameStateManager);
+            ConfigureMarkerToolPlacement(root, gameStateManager, trackedImageManager, toolDefinitions);
+        }
+
+        static ARTrackedImageManager GetOrCreateTrackedImageManager()
+        {
+            var trackedImageManager = UnityEngine.Object.FindFirstObjectByType<ARTrackedImageManager>();
+            if (trackedImageManager != null)
+                return trackedImageManager;
+
+            var xrOrigin = UnityEngine.Object.FindFirstObjectByType<XROrigin>();
+            if (xrOrigin == null)
+            {
+                Debug.LogWarning("No XROrigin found. Marker-based tool placement cannot start image tracking.");
+                return null;
+            }
+
+            trackedImageManager = xrOrigin.gameObject.AddComponent<ARTrackedImageManager>();
+            trackedImageManager.enabled = false;
+            return trackedImageManager;
         }
 
         static void CreateHud(Transform parent, GameStateManager gameStateManager, RoomScanController scanController)
@@ -116,6 +139,24 @@ namespace PhasmophobiAR.Game
             gateObject.transform.SetParent(parent);
             var gate = gateObject.AddComponent<InvestigationPhaseGate>();
             gate.Configure(gameStateManager, Array.Empty<GameObject>(), behaviours.ToArray(), Array.Empty<Collider>(), buttons.ToArray());
+        }
+
+        static void ConfigureMarkerToolPlacement(
+            GameObject root,
+            GameStateManager gameStateManager,
+            ARTrackedImageManager trackedImageManager,
+            MarkerToolDefinition[] toolDefinitions)
+        {
+            if (trackedImageManager == null)
+                return;
+
+            var loader = root.AddComponent<MarkerImageLibraryLoader>();
+            loader.Configure(trackedImageManager, toolDefinitions);
+
+            var spawner = root.AddComponent<MarkerToolSpawner>();
+            spawner.enabled = false;
+            spawner.Configure(gameStateManager, trackedImageManager, toolDefinitions);
+            spawner.enabled = true;
         }
 
         static GameObject CreatePanel(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPosition, Vector2 sizeDelta)
