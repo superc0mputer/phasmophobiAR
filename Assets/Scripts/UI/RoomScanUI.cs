@@ -32,6 +32,12 @@ namespace PhasmophobiAR.UI
         [SerializeField]
         TMP_Text m_InstructionText;
 
+        [SerializeField]
+        TMP_Text m_RoomSignalsText;
+
+        [SerializeField]
+        Button m_StartInvestigationButton;
+
         bool m_IsSubscribed;
 
         public void Configure(
@@ -42,7 +48,9 @@ namespace PhasmophobiAR.UI
             Slider progressSlider,
             TMP_Text progressText,
             TMP_Text trackingText,
-            TMP_Text instructionText)
+            TMP_Text instructionText,
+            TMP_Text roomSignalsText,
+            Button startInvestigationButton)
         {
             m_GameStateManager = gameStateManager;
             m_RoomScanController = roomScanController;
@@ -52,9 +60,14 @@ namespace PhasmophobiAR.UI
             m_ProgressText = progressText;
             m_TrackingText = trackingText;
             m_InstructionText = instructionText;
+            m_RoomSignalsText = roomSignalsText;
+            m_StartInvestigationButton = startInvestigationButton;
 
             if (isActiveAndEnabled)
+            {
+                Unsubscribe();
                 Subscribe();
+            }
         }
 
         void Awake()
@@ -86,6 +99,9 @@ namespace PhasmophobiAR.UI
 
             if (m_InvestigationRoot != null)
                 m_InvestigationRoot.SetActive(phase == GamePhase.Investigation);
+
+            if (m_StartInvestigationButton != null && phase == GamePhase.RoomScan)
+                m_StartInvestigationButton.gameObject.SetActive(false);
         }
 
         void OnScanUpdated(RoomScanController.ScanSnapshot snapshot)
@@ -101,6 +117,34 @@ namespace PhasmophobiAR.UI
 
             if (m_InstructionText != null)
                 m_InstructionText.text = snapshot.instruction;
+
+            if (m_RoomSignalsText != null)
+            {
+                var meshStatus = snapshot.hasLiDARMeshData ? $"Mesh: {snapshot.meshCount}/{snapshot.meshVertexCount}" : "Mesh: none";
+                var depthStatus = snapshot.hasDepthOcclusion ? "Depth: on" : "Depth: off";
+                m_RoomSignalsText.text = $"Surfaces: {snapshot.trackedPlaneCount}  Room detail: {GetRoomDetailLabel(snapshot)}  Bounds: {(snapshot.hasEstimatedBounds ? "yes" : "no")}  Spawn options: {snapshot.safeSpawnCount}  {meshStatus}  {depthStatus}";
+            }
+
+            if (m_StartInvestigationButton != null)
+            {
+                m_StartInvestigationButton.gameObject.SetActive(snapshot.isReady);
+                m_StartInvestigationButton.interactable = snapshot.isReady
+                    && (snapshot.confidence == TrackingConfidence.Good || snapshot.confidence == TrackingConfidence.Limited);
+            }
+        }
+
+        static string GetRoomDetailLabel(RoomScanController.ScanSnapshot snapshot)
+        {
+            if (snapshot.hasLiDARMeshData || snapshot.featurePointCount >= 120)
+                return "high";
+
+            if (snapshot.featurePointCount >= 45)
+                return "medium";
+
+            if (snapshot.featurePointCount > 0)
+                return "low";
+
+            return "none";
         }
 
         void Subscribe()
@@ -113,6 +157,9 @@ namespace PhasmophobiAR.UI
 
             if (m_RoomScanController != null)
                 m_RoomScanController.ScanUpdated += OnScanUpdated;
+
+            if (m_StartInvestigationButton != null && m_RoomScanController != null)
+                m_StartInvestigationButton.onClick.AddListener(m_RoomScanController.ConfirmScan);
 
             m_IsSubscribed = true;
         }
@@ -127,6 +174,9 @@ namespace PhasmophobiAR.UI
 
             if (m_RoomScanController != null)
                 m_RoomScanController.ScanUpdated -= OnScanUpdated;
+
+            if (m_StartInvestigationButton != null && m_RoomScanController != null)
+                m_StartInvestigationButton.onClick.RemoveListener(m_RoomScanController.ConfirmScan);
 
             m_IsSubscribed = false;
         }

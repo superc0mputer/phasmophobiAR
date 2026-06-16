@@ -34,9 +34,12 @@ namespace PhasmophobiAR.Game
             var gameStateManager = root.AddComponent<GameStateManager>();
             var arCamera = Camera.main;
             var planeManager = UnityEngine.Object.FindFirstObjectByType<ARPlaneManager>();
+            var pointCloudManager = UnityEngine.Object.FindFirstObjectByType<ARPointCloudManager>();
+            var meshManager = UnityEngine.Object.FindFirstObjectByType<ARMeshManager>();
+            var occlusionManager = UnityEngine.Object.FindFirstObjectByType<AROcclusionManager>();
 
             var scanController = root.AddComponent<RoomScanController>();
-            scanController.Configure(gameStateManager, arCamera, planeManager);
+            scanController.Configure(gameStateManager, arCamera, planeManager, pointCloudManager, meshManager, occlusionManager);
 
             var ghostSpawnController = root.AddComponent<GhostSpawnController>();
             _ = ghostSpawnController;
@@ -56,7 +59,7 @@ namespace PhasmophobiAR.Game
             canvasObject.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             canvasObject.AddComponent<GraphicRaycaster>();
 
-            var scanRoot = CreatePanel(canvasObject.transform, "Scan Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(520f, 128f));
+            var scanRoot = CreatePanel(canvasObject.transform, "Scan Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(620f, 202f));
             var investigationRoot = CreatePanel(canvasObject.transform, "Investigation Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(420f, 76f));
 
             var scanTitle = CreateText(scanRoot.transform, "Scan Title", "Scan the room", 24, TextAlignmentOptions.Center);
@@ -74,11 +77,18 @@ namespace PhasmophobiAR.Game
             var instructionText = CreateText(scanRoot.transform, "Instruction Text", "Move slowly and look around.", 16, TextAlignmentOptions.Center);
             SetRect(instructionText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -112f), new Vector2(480f, 26f));
 
+            var roomSignalsText = CreateText(scanRoot.transform, "Room Signals Text", "Surfaces: 0  Room detail: none  Bounds: no  Spawn options: 0  Mesh: none  Depth: off", 13, TextAlignmentOptions.Center);
+            SetRect(roomSignalsText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -138f), new Vector2(590f, 24f));
+
+            var startButton = CreateButton(scanRoot.transform, "Start Investigation Button", "Start Investigation");
+            SetRect(startButton.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -174f), new Vector2(220f, 36f));
+            startButton.gameObject.SetActive(false);
+
             var investigationText = CreateText(investigationRoot.transform, "Investigation Text", "Investigation started", 22, TextAlignmentOptions.Center);
             SetRect(investigationText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(360f, 42f));
 
             var ui = canvasObject.AddComponent<RoomScanUI>();
-            ui.Configure(gameStateManager, scanController, scanRoot, investigationRoot, slider, progressText, trackingText, instructionText);
+            ui.Configure(gameStateManager, scanController, scanRoot, investigationRoot, slider, progressText, trackingText, instructionText, roomSignalsText, startButton);
         }
 
         static void GateTemplatePlacement(Transform parent, GameStateManager gameStateManager)
@@ -162,6 +172,24 @@ namespace PhasmophobiAR.Game
             slider.targetGraphic = fillImage;
             slider.fillRect = fill.GetComponent<RectTransform>();
             return slider;
+        }
+
+        static Button CreateButton(Transform parent, string name, string text)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform));
+            buttonObject.transform.SetParent(parent, false);
+
+            var image = buttonObject.AddComponent<Image>();
+            image.color = new Color(0.35f, 0.9f, 0.72f, 0.95f);
+
+            var button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = image;
+
+            var label = CreateText(buttonObject.transform, "Label", text, 16, TextAlignmentOptions.Center);
+            label.color = new Color(0.02f, 0.025f, 0.03f, 1f);
+            SetRect(label.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            return button;
         }
 
         static void SetRect(RectTransform rect, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPosition, Vector2 sizeDelta)
