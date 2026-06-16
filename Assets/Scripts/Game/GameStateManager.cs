@@ -1,4 +1,5 @@
 using System;
+using PhasmophobiAR.Scanning;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -22,12 +23,15 @@ namespace PhasmophobiAR.Game
 
         GamePhase m_CurrentPhase;
         bool m_HasCompletedRoomScan;
+        RoomScanResult m_LastRoomScanResult;
 
         public event Action<GamePhase> PhaseChanged;
         public event Action ScanCompleted;
+        public event Action<RoomScanResult> ScanCompletedWithResult;
 
         public GamePhase CurrentPhase => m_CurrentPhase;
         public bool HasCompletedRoomScan => m_HasCompletedRoomScan;
+        public RoomScanResult LastRoomScanResult => m_LastRoomScanResult;
         public bool CanPlaceTools => m_CurrentPhase == GamePhase.Investigation;
         public bool CanCaptureGhost => m_CurrentPhase == GamePhase.Investigation;
         public UnityEvent<GamePhase> phaseChanged => m_PhaseChanged;
@@ -71,12 +75,19 @@ namespace PhasmophobiAR.Game
 
         public void CompleteRoomScan()
         {
+            CompleteRoomScan(null);
+        }
+
+        public void CompleteRoomScan(RoomScanResult scanResult)
+        {
             if (m_HasCompletedRoomScan)
                 return;
 
             m_HasCompletedRoomScan = true;
+            m_LastRoomScanResult = scanResult;
             m_ScanCompleted.Invoke();
             ScanCompleted?.Invoke();
+            ScanCompletedWithResult?.Invoke(m_LastRoomScanResult);
             SetPhase(GamePhase.Investigation);
         }
 
@@ -88,6 +99,7 @@ namespace PhasmophobiAR.Game
         public void ResetRound()
         {
             m_HasCompletedRoomScan = false;
+            m_LastRoomScanResult = null;
             SetPhase(GamePhase.Setup);
         }
 
