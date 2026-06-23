@@ -42,6 +42,8 @@ namespace PhasmophobiAR.Game
             var trackedImageManager = GetOrCreateTrackedImageManager();
             var toolDefinitions = MarkerToolDefaults.CreateDefinitions();
 
+            Debug.Log($"PhasmophobiAR bootstrap. Camera={(arCamera != null ? arCamera.name : "none")}, PlaneManager={(planeManager != null)}, TrackedImageManager={(trackedImageManager != null ? trackedImageManager.name : "none")}.");
+
             var scanController = root.AddComponent<RoomScanController>();
             scanController.Configure(gameStateManager, arCamera, planeManager, pointCloudManager, meshManager, occlusionManager);
 
@@ -57,7 +59,10 @@ namespace PhasmophobiAR.Game
         {
             var trackedImageManager = UnityEngine.Object.FindFirstObjectByType<ARTrackedImageManager>();
             if (trackedImageManager != null)
+            {
+                Debug.Log($"Found existing ARTrackedImageManager on {trackedImageManager.gameObject.name}.");
                 return trackedImageManager;
+            }
 
             var xrOrigin = UnityEngine.Object.FindFirstObjectByType<XROrigin>();
             if (xrOrigin == null)
@@ -68,6 +73,7 @@ namespace PhasmophobiAR.Game
 
             trackedImageManager = xrOrigin.gameObject.AddComponent<ARTrackedImageManager>();
             trackedImageManager.enabled = false;
+            Debug.Log($"Created ARTrackedImageManager on {xrOrigin.gameObject.name}.");
             return trackedImageManager;
         }
 
@@ -83,7 +89,7 @@ namespace PhasmophobiAR.Game
             canvasObject.AddComponent<GraphicRaycaster>();
 
             var scanRoot = CreatePanel(canvasObject.transform, "Scan Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(620f, 202f));
-            var investigationRoot = CreatePanel(canvasObject.transform, "Investigation Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(420f, 76f));
+            var investigationRoot = CreatePanel(canvasObject.transform, "Investigation Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(520f, 112f));
 
             var scanTitle = CreateText(scanRoot.transform, "Scan Title", "Scan the room", 24, TextAlignmentOptions.Center);
             SetRect(scanTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -22f), new Vector2(480f, 32f));
@@ -108,7 +114,10 @@ namespace PhasmophobiAR.Game
             startButton.gameObject.SetActive(false);
 
             var investigationText = CreateText(investigationRoot.transform, "Investigation Text", "Investigation started", 22, TextAlignmentOptions.Center);
-            SetRect(investigationText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(360f, 42f));
+            SetRect(investigationText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(420f, 34f));
+
+            var markerStatusText = CreateText(investigationRoot.transform, "Marker Status Text", "Markers: waiting for detection", 15, TextAlignmentOptions.Center);
+            SetRect(markerStatusText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(480f, 26f));
 
             var ui = canvasObject.AddComponent<RoomScanUI>();
             ui.Configure(gameStateManager, scanController, scanRoot, investigationRoot, slider, progressText, trackingText, instructionText, roomSignalsText, startButton);
@@ -148,7 +157,10 @@ namespace PhasmophobiAR.Game
             MarkerToolDefinition[] toolDefinitions)
         {
             if (trackedImageManager == null)
+            {
+                Debug.LogWarning("Marker tool placement disabled because there is no ARTrackedImageManager.");
                 return;
+            }
 
             var loader = root.AddComponent<MarkerImageLibraryLoader>();
             loader.Configure(trackedImageManager, toolDefinitions);

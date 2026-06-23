@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using PhasmophobiAR.Game;
+using TMPro;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
 using UnityEngine.XR.ARSubsystems;
@@ -17,7 +19,11 @@ namespace PhasmophobiAR.Markers
         [SerializeField]
         MarkerToolDefinition[] m_ToolDefinitions;
 
+        [SerializeField]
+        TMP_Text m_StatusText;
+
         readonly Dictionary<string, MarkerToolDefinition> m_DefinitionsByMarkerName = new Dictionary<string, MarkerToolDefinition>();
+        readonly Dictionary<Guid, MarkerToolDefinition> m_DefinitionsByTextureGuid = new Dictionary<Guid, MarkerToolDefinition>();
         readonly Dictionary<string, GameObject> m_SpawnedToolsByMarkerName = new Dictionary<string, GameObject>();
 
         public void Configure(
@@ -27,7 +33,7 @@ namespace PhasmophobiAR.Markers
         {
             m_GameStateManager = gameStateManager;
             m_TrackedImageManager = trackedImageManager;
-            m_ToolDefinitions = toolDefinitions;
+            m_ToolDefinitions = HasDefinitions(toolDefinitions) ? toolDefinitions : MarkerToolDefaults.CreateDefinitions();
             RebuildDefinitionLookup();
         }
 
@@ -41,6 +47,16 @@ namespace PhasmophobiAR.Markers
 
         void OnEnable()
         {
+            if (m_StatusText == null)
+            {
+                var statusObject = GameObject.Find("Marker Status Text");
+                if (statusObject != null)
+                    m_StatusText = statusObject.GetComponent<TMP_Text>();
+            }
+
+            Debug.Log($"Marker tool spawner enabled. Image manager: {(m_TrackedImageManager != null ? m_TrackedImageManager.name : "none")}. Definitions: {m_DefinitionsByMarkerName.Count}.");
+            SetStatus("Markers: waiting for detection");
+
             if (m_TrackedImageManager != null)
                 m_TrackedImageManager.trackablesChanged.AddListener(OnTrackedImagesChanged);
 
@@ -59,15 +75,24 @@ namespace PhasmophobiAR.Markers
 
         void OnPhaseChanged(GamePhase phase)
         {
-            if (phase != GamePhase.Investigation || m_TrackedImageManager == null)
-                return;
+            Debug.Log($"Marker tool spawner phase changed to {phase}. CanPlaceTools={m_GameStateManager != null && m_GameStateManager.CanPlaceTools}.");
 
+            if (phase != GamePhase.Investigation || m_TrackedImageManager == null)
+            {
+                SetStatus("Markers: waiting for investigation");
+                return;
+            }
+
+            Debug.Log($"Checking {m_TrackedImageManager.trackables.count} existing tracked image(s) for tool placement.");
+            SetStatus($"Markers: checking {m_TrackedImageManager.trackables.count} tracked image(s)");
             foreach (var trackedImage in m_TrackedImageManager.trackables)
                 HandleTrackedImage(trackedImage, "existing");
         }
 
         void OnTrackedImagesChanged(ARTrackablesChangedEventArgs<ARTrackedImage> eventArgs)
         {
+            Debug.Log($"Tracked images changed. Added={eventArgs.added.Count}, Updated={eventArgs.updated.Count}, Removed={eventArgs.removed.Count}.");
+
             foreach (var trackedImage in eventArgs.added)
                 HandleTrackedImage(trackedImage, "added");
 
@@ -86,27 +111,27 @@ namespace PhasmophobiAR.Markers
             if (trackedImage == null)
                 return;
 
-            var markerName = trackedImage.referenceImage.name;
-            if (string.IsNullOrEmpty(markerName))
-                return;
-
-            if (!m_DefinitionsByMarkerName.TryGetValue(markerName, out var definition))
+            if (!TryGetDefinition(trackedImage, out var markerName, out var definition))
             {
-                Debug.Log($"Tracked image '{markerName}' has no tool mapping.");
+                Debug.Log($"Tracked image ignored. Name='{trackedImage.referenceImage.name}', textureGuid={trackedImage.referenceImage.textureGuid}, sourceImageId={trackedImage.trackableId}, size={trackedImage.size}, position={trackedImage.transform.position}, state={trackedImage.trackingState}. This image is not in the marker reference library.");
+                SetStatus($"Markers: ignored '{trackedImage.referenceImage.name}'");
                 return;
             }
 
             Debug.Log($"Tool marker '{markerName}' {lifecycle}; state={trackedImage.trackingState}.");
+            SetStatus($"Markers: saw {definition.DisplayName} ({trackedImage.trackingState})");
 
             if (m_GameStateManager != null && !m_GameStateManager.CanPlaceTools)
             {
                 Debug.Log($"Tool marker '{markerName}' ignored until investigation starts.");
+                SetStatus($"Markers: saw {definition.DisplayName}; start investigation to place it");
                 return;
             }
 
             if (trackedImage.trackingState != TrackingState.Tracking)
             {
                 Debug.Log($"Tool marker '{markerName}' is not currently tracking. Keeping existing tool stable.");
+                SetStatus($"Markers: {definition.DisplayName} is {trackedImage.trackingState}");
                 return;
             }
 
@@ -115,11 +140,13 @@ namespace PhasmophobiAR.Markers
                 tool = SpawnTool(definition, trackedImage.transform);
                 m_SpawnedToolsByMarkerName[markerName] = tool;
                 Debug.Log($"Spawned {definition.DisplayName} for marker '{markerName}'.");
+                SetStatus($"Markers: spawned {definition.DisplayName}");
             }
             else
             {
                 ApplyPose(tool.transform, trackedImage.transform);
                 Debug.Log($"Updated {definition.DisplayName} pose from re-detected marker '{markerName}'.");
+                SetStatus($"Markers: updated {definition.DisplayName}");
             }
         }
 
@@ -203,8 +230,9 @@ namespace PhasmophobiAR.Markers
         void RebuildDefinitionLookup()
         {
             m_DefinitionsByMarkerName.Clear();
-            if (m_ToolDefinitions == null)
-                return;
+            m_DefinitionsByTextureGuid.Clear();
+            if (!HasDefinitions(m_ToolDefinitions))
+                m_ToolDefinitions = MarkerToolDefaults.CreateDefinitions();
 
             foreach (var definition in m_ToolDefinitions)
             {
@@ -213,6 +241,49 @@ namespace PhasmophobiAR.Markers
 
                 m_DefinitionsByMarkerName[definition.MarkerName] = definition;
             }
+
+            if (Guid.TryParse(MarkerToolDefaults.EMFMarkerTextureGuid, out var emfGuid)
+                && m_DefinitionsByMarkerName.TryGetValue(MarkerToolDefaults.EMFMarkerName, out var emfDefinition))
+            {
+                m_DefinitionsByTextureGuid[emfGuid] = emfDefinition;
+            }
+
+            if (Guid.TryParse(MarkerToolDefaults.ThermometerMarkerTextureGuid, out var thermometerGuid)
+                && m_DefinitionsByMarkerName.TryGetValue(MarkerToolDefaults.ThermometerMarkerName, out var thermometerDefinition))
+            {
+                m_DefinitionsByTextureGuid[thermometerGuid] = thermometerDefinition;
+            }
+        }
+
+        bool TryGetDefinition(ARTrackedImage trackedImage, out string markerName, out MarkerToolDefinition definition)
+        {
+            markerName = trackedImage.referenceImage.name;
+            if (!string.IsNullOrEmpty(markerName)
+                && m_DefinitionsByMarkerName.TryGetValue(markerName, out definition))
+            {
+                return true;
+            }
+
+            var textureGuid = trackedImage.referenceImage.textureGuid;
+            if (textureGuid != Guid.Empty && m_DefinitionsByTextureGuid.TryGetValue(textureGuid, out definition))
+            {
+                markerName = definition.MarkerName;
+                return true;
+            }
+
+            definition = null;
+            return false;
+        }
+
+        void SetStatus(string message)
+        {
+            if (m_StatusText != null)
+                m_StatusText.text = message;
+        }
+
+        static bool HasDefinitions(MarkerToolDefinition[] definitions)
+        {
+            return definitions != null && definitions.Length > 0;
         }
     }
 }
