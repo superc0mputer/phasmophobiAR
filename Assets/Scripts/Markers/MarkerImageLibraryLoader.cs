@@ -23,11 +23,12 @@ namespace PhasmophobiAR.Markers
         public void Configure(ARTrackedImageManager trackedImageManager, MarkerToolDefinition[] toolDefinitions)
         {
             m_TrackedImageManager = trackedImageManager;
-            m_ToolDefinitions = toolDefinitions;
+            m_ToolDefinitions = HasDefinitions(toolDefinitions) ? toolDefinitions : MarkerToolDefaults.CreateDefinitions();
         }
 
         void Start()
         {
+            Debug.Log("Marker image library loader starting.");
             StartCoroutine(LoadWhenARIsReady());
         }
 
@@ -37,9 +38,17 @@ namespace PhasmophobiAR.Markers
                 yield break;
 
             m_LoadStarted = true;
+            if (!HasDefinitions(m_ToolDefinitions))
+                m_ToolDefinitions = MarkerToolDefaults.CreateDefinitions();
+
+            Debug.Log($"Marker image library loader has {m_ToolDefinitions.Length} marker definition(s).");
+
+            Debug.Log($"Marker image library loader waiting for ARSession readiness. Current state: {ARSession.state}.");
 
             while (ARSession.state < ARSessionState.Ready)
                 yield return null;
+
+            Debug.Log($"Marker image library loader continuing. ARSession state: {ARSession.state}.");
 
             if (m_TrackedImageManager == null)
             {
@@ -49,6 +58,7 @@ namespace PhasmophobiAR.Markers
 
             var wasEnabled = m_TrackedImageManager.enabled;
             m_TrackedImageManager.enabled = false;
+            Debug.Log($"Preparing runtime marker library. Image manager was enabled: {wasEnabled}.");
 
             RuntimeReferenceImageLibrary runtimeLibrary;
             try
@@ -70,11 +80,12 @@ namespace PhasmophobiAR.Markers
 
             m_TrackedImageManager.referenceLibrary = mutableLibrary;
 
-            foreach (var definition in m_ToolDefinitions ?? System.Array.Empty<MarkerToolDefinition>())
+            foreach (var definition in m_ToolDefinitions)
             {
                 if (definition == null)
                     continue;
 
+                Debug.Log($"Loading marker texture Resources/{definition.TextureResourcePath} for '{definition.MarkerName}'.");
                 var texture = Resources.Load<Texture2D>(definition.TextureResourcePath);
                 if (texture == null)
                 {
@@ -82,6 +93,7 @@ namespace PhasmophobiAR.Markers
                     continue;
                 }
 
+                Debug.Log($"Marker texture '{definition.MarkerName}' loaded. Size={texture.width}x{texture.height}, format={texture.format}, readable={texture.isReadable}.");
                 try
                 {
                     var jobState = mutableLibrary.ScheduleAddImageWithValidationJob(
@@ -93,7 +105,7 @@ namespace PhasmophobiAR.Markers
                 }
                 catch (System.Exception exception)
                 {
-                    Debug.LogWarning($"Failed to schedule marker image '{definition.MarkerName}': {exception.Message}");
+                    Debug.LogError($"Failed to schedule marker image '{definition.MarkerName}': {exception.GetType().Name}: {exception.Message}");
                 }
             }
 
@@ -102,8 +114,12 @@ namespace PhasmophobiAR.Markers
 
             IsLoaded = true;
             m_TrackedImageManager.requestedMaxNumberOfMovingImages = Mathf.Max(1, m_ToolDefinitions?.Length ?? 0);
-            m_TrackedImageManager.enabled = wasEnabled || m_AddJobs.Count > 0;
-            Debug.Log($"Marker image library ready with {m_AddJobs.Count} scheduled marker images.");
+            m_TrackedImageManager.enabled = wasEnabled || HasDefinitions(m_ToolDefinitions);
+
+            if (m_AddJobs.Count == 0 && HasDefinitions(m_ToolDefinitions))
+                Debug.LogWarning("No marker images were added to the runtime library. Image tracking is still enabled so XR Simulation can report simulated tracked images.");
+
+            Debug.Log($"Marker image library ready with {m_AddJobs.Count} scheduled marker images. Image manager enabled: {m_TrackedImageManager.enabled}.");
         }
 
         bool AllJobsComplete()
@@ -129,6 +145,11 @@ namespace PhasmophobiAR.Markers
             }
 
             return allComplete;
+        }
+
+        static bool HasDefinitions(MarkerToolDefinition[] definitions)
+        {
+            return definitions != null && definitions.Length > 0;
         }
     }
 }
