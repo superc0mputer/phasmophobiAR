@@ -78,6 +78,9 @@ namespace PhasmophobiAR.Scanning
         float m_RotationNoiseThresholdDegrees = 2f;
 
         [SerializeField]
+        float m_CoverageWarmupSeconds = 0.75f;
+
+        [SerializeField]
         float m_PoorTrackingDecayPerSecond = 0.04f;
 
         [SerializeField]
@@ -113,6 +116,7 @@ namespace PhasmophobiAR.Scanning
 
         float m_ElapsedSeconds;
         float m_StableTrackingSeconds;
+        float m_GoodTrackingSeconds;
         float m_MovementMeters;
         float m_LookDegrees;
         float m_Progress;
@@ -193,6 +197,7 @@ namespace PhasmophobiAR.Scanning
         {
             m_ElapsedSeconds = 0f;
             m_StableTrackingSeconds = 0f;
+            m_GoodTrackingSeconds = 0f;
             m_MovementMeters = 0f;
             m_LookDegrees = 0f;
             m_Progress = 0f;
@@ -218,6 +223,11 @@ namespace PhasmophobiAR.Scanning
                 m_StableTrackingSeconds += deltaTime;
             else
                 m_StableTrackingSeconds = Mathf.Max(0f, m_StableTrackingSeconds - deltaTime);
+
+            if (m_Confidence == TrackingConfidence.Good)
+                m_GoodTrackingSeconds += deltaTime;
+            else
+                m_GoodTrackingSeconds = 0f;
         }
 
         TrackingConfidence EvaluateTrackingConfidence()
@@ -245,11 +255,15 @@ namespace PhasmophobiAR.Scanning
 
             var cameraTransform = m_ARCamera.transform;
 
+            if (m_GoodTrackingSeconds < m_CoverageWarmupSeconds)
+            {
+                CaptureCameraCoverageBaseline(cameraTransform);
+                return;
+            }
+
             if (!m_HasCameraPose)
             {
-                m_LastCameraPosition = cameraTransform.position;
-                m_LastCameraRotation = cameraTransform.rotation;
-                m_HasCameraPose = true;
+                CaptureCameraCoverageBaseline(cameraTransform);
                 return;
             }
 
@@ -266,6 +280,13 @@ namespace PhasmophobiAR.Scanning
                 m_LookDegrees += angle;
                 m_LastCameraRotation = cameraTransform.rotation;
             }
+        }
+
+        void CaptureCameraCoverageBaseline(Transform cameraTransform)
+        {
+            m_LastCameraPosition = cameraTransform.position;
+            m_LastCameraRotation = cameraTransform.rotation;
+            m_HasCameraPose = true;
         }
 
         void UpdateProgress(float deltaTime)
