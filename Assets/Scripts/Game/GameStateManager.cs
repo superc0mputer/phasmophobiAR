@@ -1,4 +1,5 @@
 using System;
+using PhasmophobiAR.Ghosts;
 using PhasmophobiAR.Scanning;
 using UnityEngine;
 using UnityEngine.Events;
@@ -21,19 +22,25 @@ namespace PhasmophobiAR.Game
         [SerializeField]
         UnityEvent m_ScanCompleted = new UnityEvent();
 
+        [SerializeField]
+        IdentificationController m_IdentificationController;
+
         GamePhase m_CurrentPhase;
         bool m_HasCompletedRoomScan;
         RoomScanResult m_LastRoomScanResult;
+        RoundResult m_LastRoundResult;
 
         public event Action<GamePhase> PhaseChanged;
         public event Action ScanCompleted;
         public event Action<RoomScanResult> ScanCompletedWithResult;
+        public event Action<RoundResult> ResultPrepared;
 
         public GamePhase CurrentPhase => m_CurrentPhase;
         public bool HasCompletedRoomScan => m_HasCompletedRoomScan;
         public RoomScanResult LastRoomScanResult => m_LastRoomScanResult;
         public bool CanPlaceTools => m_CurrentPhase == GamePhase.Investigation;
         public bool CanCaptureGhost => m_CurrentPhase == GamePhase.Investigation;
+        public RoundResult LastRoundResult => m_LastRoundResult;
         public UnityEvent<GamePhase> phaseChanged => m_PhaseChanged;
         public UnityEvent scanCompleted => m_ScanCompleted;
 
@@ -49,6 +56,9 @@ namespace PhasmophobiAR.Game
             Instance = this;
             m_CurrentPhase = m_InitialPhase;
             m_HasCompletedRoomScan = m_InitialPhase == GamePhase.Investigation || m_InitialPhase == GamePhase.Result;
+
+            if (m_IdentificationController == null)
+                m_IdentificationController = IdentificationController.Instance;
         }
 
         void Start()
@@ -93,6 +103,19 @@ namespace PhasmophobiAR.Game
 
         public void ShowResult()
         {
+            if (m_IdentificationController == null)
+                m_IdentificationController = IdentificationController.Instance;
+
+            if (m_IdentificationController != null)
+            {
+                m_LastRoundResult = m_IdentificationController.Evaluate();
+                ResultPrepared?.Invoke(m_LastRoundResult);
+            }
+            else
+            {
+                Debug.LogWarning("Result requested without an IdentificationController in the scene.");
+            }
+
             SetPhase(GamePhase.Result);
         }
 
@@ -100,7 +123,11 @@ namespace PhasmophobiAR.Game
         {
             m_HasCompletedRoomScan = false;
             m_LastRoomScanResult = null;
+            m_LastRoundResult = null;
             EvidenceRegistry.Instance?.Clear();
+            IdentificationController.Instance?.ClearSelection();
+            GhostCaseController.Instance?.BeginNewCase();
+            GhostSpawnController.Instance?.ResetSpawnedGhosts();
             SetPhase(GamePhase.Setup);
         }
 

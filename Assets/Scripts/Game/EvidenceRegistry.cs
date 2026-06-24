@@ -11,6 +11,8 @@ namespace PhasmophobiAR.Game
         readonly HashSet<EvidenceType> m_RecordedEvidence = new HashSet<EvidenceType>();
 
         public event Action<EvidenceType> EvidenceRecorded;
+        public event Action EvidenceChanged;
+        public event Action EvidenceCleared;
 
         public IReadOnlyCollection<EvidenceType> RecordedEvidence => m_RecordedEvidence;
 
@@ -44,12 +46,25 @@ namespace PhasmophobiAR.Game
 
             Debug.Log($"Evidence recorded: {evidenceType}");
             EvidenceRecorded?.Invoke(evidenceType);
+            EvidenceChanged?.Invoke();
             return true;
+        }
+
+        public EvidenceType[] GetRecordedEvidenceSnapshot()
+        {
+            var snapshot = new EvidenceType[m_RecordedEvidence.Count];
+            m_RecordedEvidence.CopyTo(snapshot);
+            return snapshot;
         }
 
         public void Clear()
         {
+            if (m_RecordedEvidence.Count == 0)
+                return;
+
             m_RecordedEvidence.Clear();
+            EvidenceCleared?.Invoke();
+            EvidenceChanged?.Invoke();
         }
     }
 }

@@ -24,6 +24,9 @@ namespace PhasmophobiAR.Scanning
         GameStateManager m_GameStateManager;
 
         [SerializeField]
+        EvidenceRegistry m_EvidenceRegistry;
+
+        [SerializeField]
         Camera m_ARCamera;
 
         [SerializeField]
@@ -47,6 +50,7 @@ namespace PhasmophobiAR.Scanning
 
         readonly Dictionary<Transform, float> m_LastTraceTime = new Dictionary<Transform, float>();
         readonly List<GameObject> m_ActiveTraces = new List<GameObject>();
+        bool m_HasRecordedSpectralTrace;
 
         void Awake()
         {
@@ -59,23 +63,36 @@ namespace PhasmophobiAR.Scanning
             if (m_GameStateManager == null)
                 m_GameStateManager = GameStateManager.Instance;
 
+            if (m_EvidenceRegistry == null)
+                m_EvidenceRegistry = EvidenceRegistry.Instance;
+
             if (m_ARCamera == null && Camera.main != null)
                 m_ARCamera = Camera.main;
         }
 
-        public void Configure(ScannerModeManager scanner, RoomScanController scanController, GameStateManager gameStateManager, Camera arCamera, TMP_Text tracesText)
+        public void Configure(
+            ScannerModeManager scanner,
+            RoomScanController scanController,
+            GameStateManager gameStateManager,
+            Camera arCamera,
+            TMP_Text tracesText,
+            EvidenceRegistry evidenceRegistry = null)
         {
             m_ScannerModeManager = scanner ?? m_ScannerModeManager;
             m_RoomScanController = scanController ?? m_RoomScanController;
             m_GameStateManager = gameStateManager ?? m_GameStateManager;
             m_ARCamera = arCamera ?? m_ARCamera;
             m_TracesText = tracesText ?? m_TracesText;
+            m_EvidenceRegistry = evidenceRegistry ?? m_EvidenceRegistry;
         }
 
         void OnEnable()
         {
             if (m_ScannerModeManager != null)
                 m_ScannerModeManager.ModeChanged += OnModeChanged;
+
+            if (m_EvidenceRegistry != null)
+                m_EvidenceRegistry.EvidenceCleared += OnEvidenceCleared;
 
             UpdateTracesText();
         }
@@ -84,6 +101,9 @@ namespace PhasmophobiAR.Scanning
         {
             if (m_ScannerModeManager != null)
                 m_ScannerModeManager.ModeChanged -= OnModeChanged;
+
+            if (m_EvidenceRegistry != null)
+                m_EvidenceRegistry.EvidenceCleared -= OnEvidenceCleared;
         }
 
         void OnModeChanged(ScannerMode newMode)
@@ -175,7 +195,31 @@ namespace PhasmophobiAR.Scanning
             }
 
             m_ActiveTraces.Add(go);
+            TryRecordSpectralTraceEvidence();
             StartCoroutine(FadeAndDestroy(go, m_TraceLifetimeSeconds));
+        }
+
+        void TryRecordSpectralTraceEvidence()
+        {
+            if (m_HasRecordedSpectralTrace)
+                return;
+
+            if (m_EvidenceRegistry == null)
+                m_EvidenceRegistry = EvidenceRegistry.Instance;
+
+            if (m_EvidenceRegistry == null)
+            {
+                Debug.LogWarning("Spectral trace evidence could not be recorded because no EvidenceRegistry exists in the scene.");
+                return;
+            }
+
+            m_HasRecordedSpectralTrace = true;
+            m_EvidenceRegistry.RecordEvidence(EvidenceType.SpectralTrace);
+        }
+
+        void OnEvidenceCleared()
+        {
+            m_HasRecordedSpectralTrace = false;
         }
 
         IEnumerator FadeAndDestroy(GameObject go, float life)
