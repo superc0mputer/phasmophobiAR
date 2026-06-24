@@ -93,6 +93,8 @@ namespace PhasmophobiAR.Scanning
                 // clear existing traces when leaving spectral mode
                 ClearAllTraces();
             }
+
+            UpdateTracesText();
         }
 
         void Update()
@@ -202,7 +204,27 @@ namespace PhasmophobiAR.Scanning
         void UpdateTracesText()
         {
             if (m_TracesText != null)
-                m_TracesText.text = $"Traces: {m_ActiveTraces.Count}";
+            {
+                var shouldShowText = ShouldShowTracesText();
+                m_TracesText.gameObject.SetActive(shouldShowText);
+
+                if (shouldShowText)
+                    m_TracesText.text = $"Traces: {m_ActiveTraces.Count}";
+            }
+        }
+
+        bool ShouldShowTracesText()
+        {
+            if (m_ScannerModeManager == null || m_ScannerModeManager.CurrentMode != ScannerMode.Spectral)
+                return false;
+
+            if (m_GameStateManager != null && m_GameStateManager.CurrentPhase != GamePhase.Investigation)
+                return false;
+
+            if (m_RoomScanController == null)
+                return false;
+
+            return m_RoomScanController.Confidence >= m_MinTrackingRequired;
         }
     }
 }
