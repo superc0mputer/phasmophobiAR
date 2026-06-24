@@ -18,6 +18,26 @@ namespace PhasmophobiAR.Game
     {
         const string k_RootName = "PhasmophobiAR Runtime";
 
+        static T FindActiveOrAny<T>() where T : UnityEngine.Object
+        {
+            var found = UnityEngine.Object.FindObjectsByType<T>(FindObjectsInactive.Include);
+            if (found == null || found.Length == 0)
+                return null;
+
+            foreach (var o in found)
+            {
+                var comp = o as UnityEngine.Component;
+                if (comp != null)
+                {
+                    if (comp.gameObject != null && comp.gameObject.activeInHierarchy)
+                        return o;
+                }
+            }
+
+            // Fallback to first
+            return found[0];
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void BootstrapCurrentScene()
         {
@@ -47,10 +67,12 @@ namespace PhasmophobiAR.Game
             var scanController = root.AddComponent<RoomScanController>();
             scanController.Configure(gameStateManager, arCamera, planeManager, pointCloudManager, meshManager, occlusionManager);
 
+            var scannerModeManager = root.AddComponent<ScannerModeManager>();
+
             var ghostSpawnController = root.AddComponent<GhostSpawnController>();
             _ = ghostSpawnController;
 
-            CreateHud(root.transform, gameStateManager, scanController);
+            CreateHud(root.transform, gameStateManager, scanController, scannerModeManager);
             GateTemplatePlacement(root.transform, gameStateManager);
             ConfigureMarkerToolPlacement(root, gameStateManager, trackedImageManager, toolDefinitions);
         }
@@ -77,7 +99,7 @@ namespace PhasmophobiAR.Game
             return trackedImageManager;
         }
 
-        static void CreateHud(Transform parent, GameStateManager gameStateManager, RoomScanController scanController)
+        static void CreateHud(Transform parent, GameStateManager gameStateManager, RoomScanController scanController, ScannerModeManager scannerModeManager)
         {
             var canvasObject = new GameObject("Room Scan HUD", typeof(RectTransform));
             canvasObject.transform.SetParent(parent);
@@ -114,6 +136,34 @@ namespace PhasmophobiAR.Game
             startButton.gameObject.SetActive(false);
 
             var investigationText = CreateText(investigationRoot.transform, "Investigation Text", "Investigation started", 22, TextAlignmentOptions.Center);
+            SetRect(investigationText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 18f), new Vector2(360f, 42f));
+
+            var scannerModeButton = CreateButton(investigationRoot.transform, "Switch Mode Button", "Switch Mode");
+            SetRect(scannerModeButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(80f, -18f), new Vector2(160f, 32f));
+
+            var scannerModeText = CreateText(investigationRoot.transform, "Scanner Mode Text", "EMF Mode", 16, TextAlignmentOptions.Center);
+            SetRect(scannerModeText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-80f, -18f), new Vector2(160f, 32f));
+
+            var scannerModeUI = investigationRoot.AddComponent<ScannerModeUI>();
+            scannerModeUI.Configure(scannerModeManager, gameStateManager, scannerModeButton, scannerModeText);
+
+            // EMF meter slider
+            var emfSlider = CreateSlider(investigationRoot.transform);
+            SetRect(emfSlider.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -46f), new Vector2(260f, 14f));
+            emfSlider.minValue = 0f;
+            emfSlider.maxValue = 1f;
+            emfSlider.value = 0f;
+
+            // Add EMFSignalController on the root so it survives scene loads
+            var emfController = parent.gameObject.AddComponent<PhasmophobiAR.Scanning.EMFSignalController>();
+            emfController.Configure(scannerModeManager, gameStateManager, Camera.main, emfSlider);
+
+            // Spectral traces text
+            var tracesText = CreateText(investigationRoot.transform, "Traces Text", "Traces: 0", 14, TextAlignmentOptions.Center);
+            SetRect(tracesText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -66f), new Vector2(200f, 20f));
+
+            var spectralController = parent.gameObject.AddComponent<PhasmophobiAR.Scanning.SpectralTraceController>();
+            spectralController.Configure(scannerModeManager, scanController, gameStateManager, Camera.main, tracesText);
             SetRect(investigationText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(420f, 34f));
 
             var markerStatusText = CreateText(investigationRoot.transform, "Marker Status Text", "Markers: waiting for detection", 15, TextAlignmentOptions.Center);
@@ -128,7 +178,7 @@ namespace PhasmophobiAR.Game
             var behaviours = new List<Behaviour>();
             var buttons = new List<Button>();
 
-            foreach (var behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include))
             {
                 if (behaviour == null)
                     continue;
@@ -138,7 +188,7 @@ namespace PhasmophobiAR.Game
                     behaviours.Add(behaviour);
             }
 
-            foreach (var button in UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var button in UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Include))
             {
                 if (button.name.IndexOf("Create", StringComparison.OrdinalIgnoreCase) >= 0)
                     buttons.Add(button);
@@ -193,7 +243,7 @@ namespace PhasmophobiAR.Game
             label.fontSize = fontSize;
             label.alignment = alignment;
             label.color = Color.white;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             return label;
         }
 
