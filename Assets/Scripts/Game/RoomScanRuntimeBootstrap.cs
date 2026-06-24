@@ -118,6 +118,17 @@ namespace PhasmophobiAR.Game
             var scannerModeUI = investigationRoot.AddComponent<ScannerModeUI>();
             scannerModeUI.Configure(scannerModeManager, gameStateManager, scannerModeButton, scannerModeText);
 
+            // EMF meter slider
+            var emfSlider = CreateSlider(investigationRoot.transform);
+            SetRect(emfSlider.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -46f), new Vector2(260f, 14f));
+            emfSlider.minValue = 0f;
+            emfSlider.maxValue = 1f;
+            emfSlider.value = 0f;
+
+            // Add EMFSignalController on the root so it survives scene loads
+            var emfController = parent.gameObject.AddComponent<PhasmophobiAR.Scanning.EMFSignalController>();
+            emfController.Configure(scannerModeManager, gameStateManager, Camera.main, emfSlider);
+
             var ui = canvasObject.AddComponent<RoomScanUI>();
             ui.Configure(gameStateManager, scanController, scanRoot, investigationRoot, slider, progressText, trackingText, instructionText, roomSignalsText, startButton);
         }

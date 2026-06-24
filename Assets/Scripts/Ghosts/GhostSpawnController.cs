@@ -25,6 +25,14 @@ namespace PhasmophobiAR.Ghosts
 
         public bool HasSpawned => m_HasSpawned;
 
+            // Tracks spawned ghost transforms for other systems (EMF, UI)
+            static readonly System.Collections.Generic.List<Transform> s_SpawnedGhosts = new System.Collections.Generic.List<Transform>();
+
+            public static Transform[] GetSpawnedGhosts()
+            {
+                return s_SpawnedGhosts.ToArray();
+            }
+
         void Awake()
         {
             if (m_GameStateManager == null)
@@ -58,15 +66,27 @@ namespace PhasmophobiAR.Ghosts
 
             m_HasSpawned = true;
 
+            if (m_GhostPrefab == null)
+            {
+                // Try to load a default ghost prefab from Resources/Ghost.prefab to ease testing
+                var loaded = Resources.Load<GameObject>("Ghost");
+                if (loaded != null)
+                {
+                    m_GhostPrefab = loaded;
+                }
+            }
+
             if (m_GhostPrefab == null || m_ARCamera == null)
             {
-                Debug.Log("Room scan completed. Ghost spawn hook fired; assign a ghost prefab to spawn a visible ghost.");
+                Debug.Log("Room scan completed. Ghost spawn hook fired; assign a ghost prefab to spawn a visible ghost. Place a prefab at Resources/Ghost.prefab or assign one to GhostSpawnController.");
                 return;
             }
 
             if (TryGetScanSpawnPose(scanResult, out var scanPosition, out var scanRotation))
             {
-                Instantiate(m_GhostPrefab, scanPosition, scanRotation);
+                var go = Instantiate(m_GhostPrefab, scanPosition, scanRotation);
+                if (go != null)
+                    s_SpawnedGhosts.Add(go.transform);
                 return;
             }
 
@@ -76,7 +96,9 @@ namespace PhasmophobiAR.Ghosts
 
             var spawnPosition = m_ARCamera.position + forward.normalized * m_SpawnDistanceMeters;
             spawnPosition.y += m_SpawnHeightOffsetMeters;
-            Instantiate(m_GhostPrefab, spawnPosition, Quaternion.LookRotation(-forward.normalized, Vector3.up));
+            var spawned = Instantiate(m_GhostPrefab, spawnPosition, Quaternion.LookRotation(-forward.normalized, Vector3.up));
+            if (spawned != null)
+                s_SpawnedGhosts.Add(spawned.transform);
         }
 
         bool TryGetScanSpawnPose(RoomScanResult scanResult, out Vector3 position, out Quaternion rotation)
