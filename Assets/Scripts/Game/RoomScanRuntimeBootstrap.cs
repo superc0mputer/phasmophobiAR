@@ -129,6 +129,13 @@ namespace PhasmophobiAR.Game
             var emfController = parent.gameObject.AddComponent<PhasmophobiAR.Scanning.EMFSignalController>();
             emfController.Configure(scannerModeManager, gameStateManager, Camera.main, emfSlider);
 
+            // Spectral traces text
+            var tracesText = CreateText(investigationRoot.transform, "Traces Text", "Traces: 0", 14, TextAlignmentOptions.Center);
+            SetRect(tracesText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -66f), new Vector2(200f, 20f));
+
+            var spectralController = parent.gameObject.AddComponent<PhasmophobiAR.Scanning.SpectralTraceController>();
+            spectralController.Configure(scannerModeManager, scanController, gameStateManager, Camera.main, tracesText);
+
             var ui = canvasObject.AddComponent<RoomScanUI>();
             ui.Configure(gameStateManager, scanController, scanRoot, investigationRoot, slider, progressText, trackingText, instructionText, roomSignalsText, startButton);
         }

@@ -73,6 +73,7 @@ namespace PhasmophobiAR.Ghosts
                 if (loaded != null)
                 {
                     m_GhostPrefab = loaded;
+                    
                 }
             }
 
