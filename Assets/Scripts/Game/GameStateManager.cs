@@ -125,6 +125,7 @@ namespace PhasmophobiAR.Game
             m_LastRoomScanResult = null;
             m_LastRoundResult = null;
             EvidenceRegistry.Instance?.Clear();
+            JournalEvidenceSelection.Instance?.Clear();
             IdentificationController.Instance?.ClearSelection();
             GhostCaseController.Instance?.BeginNewCase();
             GhostSpawnController.Instance?.ResetSpawnedGhosts();
