@@ -54,6 +54,8 @@ namespace PhasmophobiAR.Game
             UnityEngine.Object.DontDestroyOnLoad(root);
 
             var gameStateManager = root.AddComponent<GameStateManager>();
+            var evidenceRegistry = root.AddComponent<EvidenceRegistry>();
+            _ = evidenceRegistry;
             var arCamera = Camera.main;
             var planeManager = UnityEngine.Object.FindFirstObjectByType<ARPlaneManager>();
             var pointCloudManager = UnityEngine.Object.FindFirstObjectByType<ARPointCloudManager>();

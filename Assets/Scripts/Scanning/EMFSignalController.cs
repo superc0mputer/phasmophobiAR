@@ -1,6 +1,5 @@
 using System;
 using PhasmophobiAR.Game;
-using PhasmophobiAR.Ghosts;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,15 +25,15 @@ namespace PhasmophobiAR.Scanning
 
         [Header("Tuning")]
         [SerializeField]
-        float m_MaxDistance = 8f;
-
-        [SerializeField]
-        float m_DirectionWeight = 0.6f; // how much direction affects signal (0-1)
+        EMFSignalSettings m_SignalSettings = new EMFSignalSettings();
 
         [SerializeField]
         float m_Smoothing = 8f;
 
         float m_CurrentValue;
+
+        public float CurrentValue => m_CurrentValue;
+        public int CurrentLevel => EMFSignalCalculator.ToEMFLevel(m_CurrentValue, m_SignalSettings);
 
         void Awake()
         {
@@ -93,34 +92,13 @@ namespace PhasmophobiAR.Scanning
                 return;
             }
 
-            var ghosts = GhostSpawnController.GetSpawnedGhosts();
-            if (ghosts == null || ghosts.Length == 0)
-            {
-                SmoothTo(0f);
-                return;
-            }
+            var signal = EMFSignalCalculator.CalculateFromSpawnedGhosts(
+                m_ARCamera.transform.position,
+                m_ARCamera.transform.forward,
+                m_SignalSettings,
+                true);
 
-            // find nearest ghost by projected distance (horizontal)
-            var camPos = m_ARCamera.transform.position;
-            var camForward = m_ARCamera.transform.forward;
-
-            float best = 0f;
-            foreach (var t in ghosts)
-            {
-                if (t == null) continue;
-                var toGhost = t.position - camPos;
-                var distance = toGhost.magnitude;
-                var dir = Vector3.ProjectOnPlane(toGhost, Vector3.up).normalized;
-                var forwardProj = Vector3.ProjectOnPlane(camForward, Vector3.up).normalized;
-                var angle = Vector3.Angle(forwardProj, dir);
-
-                float distanceFactor = Mathf.Clamp01(1f - (distance / m_MaxDistance));
-                float directionFactor = Mathf.Clamp01(Mathf.Cos(angle * Mathf.Deg2Rad));
-                float strength = distanceFactor * ( (1f - m_DirectionWeight) + m_DirectionWeight * directionFactor );
-                if (strength > best) best = strength;
-            }
-
-            SmoothTo(best);
+            SmoothTo(signal);
         }
 
         void SmoothTo(float target)
