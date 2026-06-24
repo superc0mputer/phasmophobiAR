@@ -58,6 +58,12 @@ namespace PhasmophobiAR.Tools
         [SerializeField]
         TMP_Text m_HologramValueText;
 
+        [SerializeField]
+        Transform m_HologramPointer;
+
+        [SerializeField]
+        float m_RuntimeHologramScale = 0.65f;
+
         [Header("Audio")]
         [SerializeField]
         AudioSource m_AudioSource;
@@ -74,6 +80,7 @@ namespace PhasmophobiAR.Tools
         float m_CurrentSignal;
         int m_CurrentLevel;
         float m_NextBeepTime;
+        Vector3 m_AuthoredHologramScale = Vector3.one;
         AudioClip m_BeepClip;
         bool m_HasRecordedSpike;
 
@@ -90,6 +97,7 @@ namespace PhasmophobiAR.Tools
                 m_EvidenceRegistry = EvidenceRegistry.Instance;
 
             EnsureModel();
+            ApplyRuntimeHologramScale();
             EnsureAudio();
             EnsureCollider();
             UpdateFeedback(0f, 0);
@@ -119,6 +127,15 @@ namespace PhasmophobiAR.Tools
             m_CurrentSignal = Mathf.Clamp01(signal);
             m_CurrentLevel = EMFSignalCalculator.ToEMFLevel(m_CurrentSignal, m_SignalSettings);
             UpdateFeedback(m_CurrentSignal, m_CurrentLevel);
+        }
+
+        void ApplyRuntimeHologramScale()
+        {
+            if (m_HologramRoot == null)
+                return;
+
+            m_AuthoredHologramScale = m_HologramRoot.localScale;
+            m_HologramRoot.localScale = m_AuthoredHologramScale * Mathf.Max(0.01f, m_RuntimeHologramScale);
         }
 
         void TryRecordSpikeEvidence()
@@ -177,17 +194,6 @@ namespace PhasmophobiAR.Tools
             }
         }
 
-        void LateUpdate()
-        {
-            if (m_HologramRoot == null || Camera.main == null)
-                return;
-
-            var cameraTransform = Camera.main.transform;
-            var directionToCamera = m_HologramRoot.position - cameraTransform.position;
-            if (directionToCamera.sqrMagnitude > 0.001f)
-                m_HologramRoot.rotation = Quaternion.LookRotation(directionToCamera.normalized, cameraTransform.up);
-        }
-
         void EnsureModel()
         {
             if (transform.Find("EMF Model") != null)
@@ -195,10 +201,7 @@ namespace PhasmophobiAR.Tools
 
             var modelPrefab = Resources.Load<GameObject>(m_ModelResourcePath);
             if (modelPrefab == null)
-            {
-                CreateFallbackBody();
                 return;
-            }
 
             var model = Instantiate(modelPrefab, transform);
             model.name = "EMF Model";
@@ -239,7 +242,9 @@ namespace PhasmophobiAR.Tools
 
             var shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null)
-                shader = Shader.Find("Standard");
+                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+                shader = Shader.Find("Unlit/Texture");
 
             foreach (var renderer in modelRoot.GetComponentsInChildren<Renderer>(true))
             {
@@ -272,6 +277,9 @@ namespace PhasmophobiAR.Tools
                 m_HologramValueText.text = (signal * 5f).ToString("0.0");
                 m_HologramValueText.color = SignalColor(signal);
             }
+
+            if (m_HologramPointer != null)
+                m_HologramPointer.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(180f, 0f, Mathf.Clamp01(signal)));
 
             UpdateHologramRenderers(m_HologramArcSegments, signal);
             UpdateHologramRenderers(m_HologramBars, signal);
@@ -325,20 +333,6 @@ namespace PhasmophobiAR.Tools
             box.size = new Vector3(0.12f, 0.05f, 0.18f);
         }
 
-        void CreateFallbackBody()
-        {
-            if (transform.Find("EMF Fallback Body") != null)
-                return;
-
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "EMF Fallback Body";
-            body.transform.SetParent(transform, false);
-            body.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-            body.transform.localScale = new Vector3(0.1f, 0.035f, 0.16f);
-            RemoveGeneratedCollider(body);
-            SetRendererColor(body.GetComponent<Renderer>(), new Color(0.055f, 0.055f, 0.06f));
-        }
-
         static AudioClip CreateBeepClip()
         {
             const int sampleRate = 22050;
@@ -386,6 +380,8 @@ namespace PhasmophobiAR.Tools
             var material = renderer.material;
             if (material.HasProperty("_BaseColor"))
                 material.SetColor("_BaseColor", color);
+            else if (material.HasProperty("_Color"))
+                material.SetColor("_Color", color);
             else
                 material.color = color;
 
@@ -426,11 +422,5 @@ namespace PhasmophobiAR.Tools
             return null;
         }
 
-        static void RemoveGeneratedCollider(GameObject gameObject)
-        {
-            var collider = gameObject.GetComponent<Collider>();
-            if (collider != null)
-                Destroy(collider);
-        }
     }
 }
