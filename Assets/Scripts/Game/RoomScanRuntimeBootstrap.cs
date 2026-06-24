@@ -16,6 +16,26 @@ namespace PhasmophobiAR.Game
     {
         const string k_RootName = "PhasmophobiAR Runtime";
 
+        static T FindActiveOrAny<T>() where T : UnityEngine.Object
+        {
+            var found = UnityEngine.Object.FindObjectsByType<T>(FindObjectsInactive.Include);
+            if (found == null || found.Length == 0)
+                return null;
+
+            foreach (var o in found)
+            {
+                var comp = o as UnityEngine.Component;
+                if (comp != null)
+                {
+                    if (comp.gameObject != null && comp.gameObject.activeInHierarchy)
+                        return o;
+                }
+            }
+
+            // Fallback to first
+            return found[0];
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void BootstrapCurrentScene()
         {
@@ -33,22 +53,24 @@ namespace PhasmophobiAR.Game
 
             var gameStateManager = root.AddComponent<GameStateManager>();
             var arCamera = Camera.main;
-            var planeManager = UnityEngine.Object.FindFirstObjectByType<ARPlaneManager>();
-            var pointCloudManager = UnityEngine.Object.FindFirstObjectByType<ARPointCloudManager>();
-            var meshManager = UnityEngine.Object.FindFirstObjectByType<ARMeshManager>();
-            var occlusionManager = UnityEngine.Object.FindFirstObjectByType<AROcclusionManager>();
+            var planeManager = FindActiveOrAny<ARPlaneManager>();
+            var pointCloudManager = FindActiveOrAny<ARPointCloudManager>();
+            var meshManager = FindActiveOrAny<ARMeshManager>();
+            var occlusionManager = FindActiveOrAny<AROcclusionManager>();
 
             var scanController = root.AddComponent<RoomScanController>();
             scanController.Configure(gameStateManager, arCamera, planeManager, pointCloudManager, meshManager, occlusionManager);
 
+            var scannerModeManager = root.AddComponent<ScannerModeManager>();
+
             var ghostSpawnController = root.AddComponent<GhostSpawnController>();
             _ = ghostSpawnController;
 
-            CreateHud(root.transform, gameStateManager, scanController);
+            CreateHud(root.transform, gameStateManager, scanController, scannerModeManager);
             GateTemplatePlacement(root.transform, gameStateManager);
         }
 
-        static void CreateHud(Transform parent, GameStateManager gameStateManager, RoomScanController scanController)
+        static void CreateHud(Transform parent, GameStateManager gameStateManager, RoomScanController scanController, ScannerModeManager scannerModeManager)
         {
             var canvasObject = new GameObject("Room Scan HUD", typeof(RectTransform));
             canvasObject.transform.SetParent(parent);
@@ -85,7 +107,16 @@ namespace PhasmophobiAR.Game
             startButton.gameObject.SetActive(false);
 
             var investigationText = CreateText(investigationRoot.transform, "Investigation Text", "Investigation started", 22, TextAlignmentOptions.Center);
-            SetRect(investigationText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(360f, 42f));
+            SetRect(investigationText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 18f), new Vector2(360f, 42f));
+
+            var scannerModeButton = CreateButton(investigationRoot.transform, "Switch Mode Button", "Switch Mode");
+            SetRect(scannerModeButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(80f, -18f), new Vector2(160f, 32f));
+
+            var scannerModeText = CreateText(investigationRoot.transform, "Scanner Mode Text", "EMF Mode", 16, TextAlignmentOptions.Center);
+            SetRect(scannerModeText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-80f, -18f), new Vector2(160f, 32f));
+
+            var scannerModeUI = investigationRoot.AddComponent<ScannerModeUI>();
+            scannerModeUI.Configure(scannerModeManager, gameStateManager, scannerModeButton, scannerModeText);
 
             var ui = canvasObject.AddComponent<RoomScanUI>();
             ui.Configure(gameStateManager, scanController, scanRoot, investigationRoot, slider, progressText, trackingText, instructionText, roomSignalsText, startButton);
@@ -96,7 +127,7 @@ namespace PhasmophobiAR.Game
             var behaviours = new List<Behaviour>();
             var buttons = new List<Button>();
 
-            foreach (var behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var behaviour in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include))
             {
                 if (behaviour == null)
                     continue;
@@ -106,7 +137,7 @@ namespace PhasmophobiAR.Game
                     behaviours.Add(behaviour);
             }
 
-            foreach (var button in UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var button in UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Include))
             {
                 if (button.name.IndexOf("Create", StringComparison.OrdinalIgnoreCase) >= 0)
                     buttons.Add(button);
@@ -140,7 +171,7 @@ namespace PhasmophobiAR.Game
             label.fontSize = fontSize;
             label.alignment = alignment;
             label.color = Color.white;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             return label;
         }
 
