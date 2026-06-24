@@ -148,7 +148,10 @@ namespace PhasmophobiAR.Tools
             {
                 m_EvidenceRegistry = EvidenceRegistry.Instance;
                 if (m_EvidenceRegistry == null)
-                    m_EvidenceRegistry = new GameObject("Evidence Registry").AddComponent<EvidenceRegistry>();
+                {
+                    Debug.LogWarning("EMF spike evidence could not be recorded because no EvidenceRegistry exists in the scene.");
+                    return;
+                }
             }
 
             m_EvidenceRegistry.RecordEvidence(EvidenceType.EMFSpike);

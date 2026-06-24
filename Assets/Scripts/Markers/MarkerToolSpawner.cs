@@ -31,9 +31,19 @@ namespace PhasmophobiAR.Markers
             ARTrackedImageManager trackedImageManager,
             MarkerToolDefinition[] toolDefinitions)
         {
+            Configure(gameStateManager, trackedImageManager, toolDefinitions, null);
+        }
+
+        public void Configure(
+            GameStateManager gameStateManager,
+            ARTrackedImageManager trackedImageManager,
+            MarkerToolDefinition[] toolDefinitions,
+            TMP_Text statusText)
+        {
             m_GameStateManager = gameStateManager;
             m_TrackedImageManager = trackedImageManager;
             m_ToolDefinitions = HasDefinitions(toolDefinitions) ? toolDefinitions : MarkerToolDefaults.CreateDefinitions();
+            m_StatusText = statusText ?? m_StatusText;
             RebuildDefinitionLookup();
         }
 

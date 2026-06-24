@@ -37,8 +37,13 @@ namespace PhasmophobiAR.Ghosts
 
     public sealed class GhostSpawnController : MonoBehaviour
     {
+        public static GhostSpawnController Instance { get; private set; }
+
         [SerializeField]
         GameStateManager m_GameStateManager;
+
+        [SerializeField]
+        GhostCaseController m_GhostCaseController;
 
         [SerializeField]
         GameObject m_GhostPrefab;
@@ -129,14 +134,46 @@ namespace PhasmophobiAR.Ghosts
 
         void Awake()
         {
+            if (Instance != null && Instance != this)
+            {
+                Debug.LogWarning($"Duplicate {nameof(GhostSpawnController)} found on {name}; disabling this instance.");
+                enabled = false;
+                return;
+            }
+
+            Instance = this;
+
             if (m_GameStateManager == null)
                 m_GameStateManager = GameStateManager.Instance;
+
+            if (m_GhostCaseController == null)
+                m_GhostCaseController = GhostCaseController.Instance;
 
             if (m_ARCamera == null && Camera.main != null)
                 m_ARCamera = Camera.main.transform;
 
             if (m_AnchorManager == null)
                 m_AnchorManager = GetOrCreateAnchorManager();
+        }
+
+        void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+        }
+
+        public void Configure(GameStateManager gameStateManager, GhostCaseController ghostCaseController, GameObject ghostPrefab, Transform arCamera)
+        {
+            m_GameStateManager = gameStateManager ?? m_GameStateManager;
+            m_GhostCaseController = ghostCaseController ?? m_GhostCaseController;
+            m_GhostPrefab = ghostPrefab ?? m_GhostPrefab;
+            m_ARCamera = arCamera ?? m_ARCamera;
+
+            if (isActiveAndEnabled)
+            {
+                Unsubscribe();
+                Subscribe();
+            }
         }
 
         void OnEnable()
@@ -202,6 +239,9 @@ namespace PhasmophobiAR.Ghosts
                 return;
 
             m_HasSpawned = true;
+            if (m_GhostCaseController == null)
+                m_GhostCaseController = GhostCaseController.Instance;
+            m_GhostCaseController?.EnsureCase();
 
             if (!ResolveGhostPrefab() || m_ARCamera == null)
             {
@@ -262,6 +302,12 @@ namespace PhasmophobiAR.Ghosts
 
             s_LastSpawnDiagnostics = diagnostics.BuildSummary(s_SpawnedGhosts);
             Debug.Log(s_LastSpawnDiagnostics);
+        }
+
+        public void ResetSpawnedGhosts()
+        {
+            m_HasSpawned = false;
+            ClearSpawnedGhosts();
         }
 
         bool ResolveGhostPrefab()
@@ -588,7 +634,7 @@ namespace PhasmophobiAR.Ghosts
             return anchorManager;
         }
 
-        static void ClearSpawnedGhosts()
+        public static void ClearSpawnedGhosts()
         {
             foreach (var info in s_SpawnedGhosts)
             {
