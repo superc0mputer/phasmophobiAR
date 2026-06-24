@@ -19,6 +19,9 @@ namespace PhasmophobiAR.UI
         EvidenceRegistry m_EvidenceRegistry;
 
         [SerializeField]
+        JournalEvidenceSelection m_JournalEvidenceSelection;
+
+        [SerializeField]
         IdentificationController m_IdentificationController;
 
         [SerializeField]
@@ -53,6 +56,12 @@ namespace PhasmophobiAR.UI
 
         [SerializeField]
         TMP_Text m_EvidenceText;
+
+        [SerializeField]
+        Button[] m_EvidenceButtons;
+
+        [SerializeField]
+        TMP_Text[] m_EvidenceButtonLabels;
 
         [SerializeField]
         TMP_Text m_PossibleGhostsText;
@@ -100,6 +109,7 @@ namespace PhasmophobiAR.UI
 
         public void Configure(
             EvidenceRegistry evidenceRegistry,
+            JournalEvidenceSelection journalEvidenceSelection,
             IdentificationController identificationController,
             JournalCaseRepository caseRepository,
             GameObject journalRoot,
@@ -112,6 +122,8 @@ namespace PhasmophobiAR.UI
             GameObject referencePage,
             GameObject casesPage,
             TMP_Text evidenceText,
+            Button[] evidenceButtons,
+            TMP_Text[] evidenceButtonLabels,
             TMP_Text possibleGhostsText,
             TMP_Text selectedGhostText,
             Button[] ghostSelectionButtons,
@@ -123,6 +135,7 @@ namespace PhasmophobiAR.UI
             Unsubscribe();
 
             m_EvidenceRegistry = evidenceRegistry ?? m_EvidenceRegistry;
+            m_JournalEvidenceSelection = journalEvidenceSelection ?? m_JournalEvidenceSelection;
             m_IdentificationController = identificationController ?? m_IdentificationController;
             m_CaseRepository = caseRepository ?? m_CaseRepository;
             m_JournalRoot = journalRoot ?? m_JournalRoot;
@@ -135,6 +148,8 @@ namespace PhasmophobiAR.UI
             m_ReferencePage = referencePage ?? m_ReferencePage;
             m_CasesPage = casesPage ?? m_CasesPage;
             m_EvidenceText = evidenceText ?? m_EvidenceText;
+            m_EvidenceButtons = evidenceButtons ?? m_EvidenceButtons;
+            m_EvidenceButtonLabels = evidenceButtonLabels ?? m_EvidenceButtonLabels;
             m_PossibleGhostsText = possibleGhostsText ?? m_PossibleGhostsText;
             m_SelectedGhostText = selectedGhostText ?? m_SelectedGhostText;
             m_GhostSelectionButtons = ghostSelectionButtons ?? m_GhostSelectionButtons;
@@ -189,11 +204,12 @@ namespace PhasmophobiAR.UI
             }
 
             WireGhostSelectionButtons();
+            WireEvidenceButtons();
 
-            if (m_EvidenceRegistry != null)
+            if (m_JournalEvidenceSelection != null)
             {
-                m_EvidenceRegistry.EvidenceChanged -= RefreshInvestigationPage;
-                m_EvidenceRegistry.EvidenceChanged += RefreshInvestigationPage;
+                m_JournalEvidenceSelection.SelectionChanged -= RefreshInvestigationPage;
+                m_JournalEvidenceSelection.SelectionChanged += RefreshInvestigationPage;
             }
 
             if (m_IdentificationController != null)
@@ -233,8 +249,17 @@ namespace PhasmophobiAR.UI
                 }
             }
 
-            if (m_EvidenceRegistry != null)
-                m_EvidenceRegistry.EvidenceChanged -= RefreshInvestigationPage;
+            if (m_EvidenceButtons != null)
+            {
+                foreach (var button in m_EvidenceButtons)
+                {
+                    if (button != null)
+                        button.onClick.RemoveAllListeners();
+                }
+            }
+
+            if (m_JournalEvidenceSelection != null)
+                m_JournalEvidenceSelection.SelectionChanged -= RefreshInvestigationPage;
             if (m_IdentificationController != null)
                 m_IdentificationController.SelectionChanged -= RefreshInvestigationPage;
             if (m_CaseRepository != null)
@@ -264,6 +289,29 @@ namespace PhasmophobiAR.UI
             }
         }
 
+        void WireEvidenceButtons()
+        {
+            if (m_EvidenceButtons == null)
+                return;
+
+            for (var i = 0; i < m_EvidenceButtons.Length; i++)
+            {
+                var button = m_EvidenceButtons[i];
+                if (button == null)
+                    continue;
+
+                button.onClick.RemoveAllListeners();
+                if (!TryGetEvidenceByIndex(i, out var evidenceType))
+                {
+                    button.gameObject.SetActive(false);
+                    continue;
+                }
+
+                button.gameObject.SetActive(true);
+                button.onClick.AddListener(() => ToggleEvidence(evidenceType));
+            }
+        }
+
         void BuildStaticLabels()
         {
             if (m_GhostSelectionLabels != null)
@@ -275,6 +323,19 @@ namespace PhasmophobiAR.UI
 
                     m_GhostSelectionLabels[i].text = i < GhostProfileCatalog.Profiles.Count
                         ? GhostProfileCatalog.Profiles[i].displayName
+                        : string.Empty;
+                }
+            }
+
+            if (m_EvidenceButtonLabels != null)
+            {
+                for (var i = 0; i < m_EvidenceButtonLabels.Length; i++)
+                {
+                    if (m_EvidenceButtonLabels[i] == null)
+                        continue;
+
+                    m_EvidenceButtonLabels[i].text = TryGetEvidenceByIndex(i, out var evidenceType)
+                        ? FormatEvidenceName(evidenceType)
                         : string.Empty;
                 }
             }
@@ -328,6 +389,15 @@ namespace PhasmophobiAR.UI
             RefreshInvestigationPage();
         }
 
+        void ToggleEvidence(EvidenceType evidenceType)
+        {
+            if (m_JournalEvidenceSelection == null)
+                m_JournalEvidenceSelection = JournalEvidenceSelection.Instance;
+
+            m_JournalEvidenceSelection?.Toggle(evidenceType);
+            RefreshInvestigationPage();
+        }
+
         void SubmitIdentification()
         {
             GameStateManager.Instance?.ShowResult();
@@ -354,16 +424,19 @@ namespace PhasmophobiAR.UI
         void RefreshInvestigationPage()
         {
             ResolveReferences();
-            var evidence = m_EvidenceRegistry != null
-                ? m_EvidenceRegistry.GetRecordedEvidenceSnapshot()
+            var evidence = m_JournalEvidenceSelection != null
+                ? m_JournalEvidenceSelection.GetSelectedEvidenceSnapshot()
                 : System.Array.Empty<EvidenceType>();
             var matchResult = GhostEvidenceMatcher.Match(evidence);
 
             if (m_EvidenceText != null)
-                m_EvidenceText.text = FormatEvidence(evidence);
+                m_EvidenceText.text = "Evidence marked:";
+
+            RefreshEvidenceButtons();
+            RefreshGhostSelectionButtons(matchResult);
 
             if (m_PossibleGhostsText != null)
-                m_PossibleGhostsText.text = FormatMatches(matchResult);
+                m_PossibleGhostsText.text = FormatGhostEliminationList(matchResult);
 
             if (m_SelectedGhostText != null)
             {
@@ -428,22 +501,49 @@ namespace PhasmophobiAR.UI
         {
             if (m_EvidenceRegistry == null)
                 m_EvidenceRegistry = EvidenceRegistry.Instance;
+            if (m_JournalEvidenceSelection == null)
+                m_JournalEvidenceSelection = JournalEvidenceSelection.Instance;
             if (m_IdentificationController == null)
                 m_IdentificationController = IdentificationController.Instance;
             if (m_CaseRepository == null)
                 m_CaseRepository = JournalCaseRepository.Instance;
         }
 
-        static string FormatEvidence(EvidenceType[] evidence)
+        void RefreshEvidenceButtons()
         {
-            if (evidence == null || evidence.Length == 0)
-                return "Evidence found:\nNone yet";
+            if (m_EvidenceButtonLabels == null)
+                return;
 
-            var builder = new StringBuilder("Evidence found:");
-            foreach (var evidenceType in evidence)
-                builder.AppendLine().Append("- ").Append(FormatEvidenceName(evidenceType));
+            for (var i = 0; i < m_EvidenceButtonLabels.Length; i++)
+            {
+                var label = m_EvidenceButtonLabels[i];
+                if (label == null || !TryGetEvidenceByIndex(i, out var evidenceType))
+                    continue;
 
-            return builder.ToString();
+                var isSelected = m_JournalEvidenceSelection != null && m_JournalEvidenceSelection.IsSelected(evidenceType);
+                label.text = isSelected
+                    ? $"[X] {FormatEvidenceName(evidenceType)}"
+                    : $"[ ] {FormatEvidenceName(evidenceType)}";
+            }
+        }
+
+        void RefreshGhostSelectionButtons(GhostMatchResult matchResult)
+        {
+            if (m_GhostSelectionLabels == null)
+                return;
+
+            for (var i = 0; i < m_GhostSelectionLabels.Length; i++)
+            {
+                var label = m_GhostSelectionLabels[i];
+                if (label == null || i >= GhostProfileCatalog.Profiles.Count)
+                    continue;
+
+                var profile = GhostProfileCatalog.Profiles[i];
+                var isPossible = IsPossible(matchResult, profile.ghostType);
+                label.text = isPossible
+                    ? profile.displayName
+                    : $"<s>{profile.displayName}</s>";
+            }
         }
 
         static string FormatEvidenceInline(EvidenceType[] evidence)
@@ -462,22 +562,54 @@ namespace PhasmophobiAR.UI
             return builder.ToString();
         }
 
-        static string FormatMatches(GhostMatchResult matchResult)
+        static string FormatGhostEliminationList(GhostMatchResult matchResult)
         {
             if (matchResult == null)
-                return "Possible ghosts: unknown";
+                return "Ghosts:\nunknown";
 
-            if (matchResult.hasMismatchedEvidence)
-                return "Possible ghosts:\nNo clean match";
-
-            if (matchResult.possibleMatches == null || matchResult.possibleMatches.Length == 0)
-                return "Possible ghosts:\nNone";
-
-            var builder = new StringBuilder("Possible ghosts:");
-            foreach (var profile in matchResult.possibleMatches)
-                builder.AppendLine().Append("- ").Append(profile.displayName);
+            var builder = new StringBuilder("Ghosts:");
+            foreach (var profile in GhostProfileCatalog.Profiles)
+            {
+                var line = IsPossible(matchResult, profile.ghostType)
+                    ? profile.displayName
+                    : $"<s>{profile.displayName}</s>";
+                builder.AppendLine().Append("- ").Append(line);
+            }
 
             return builder.ToString();
+        }
+
+        static bool IsPossible(GhostMatchResult matchResult, GhostType ghostType)
+        {
+            if (matchResult == null || matchResult.possibleMatches == null)
+                return true;
+
+            foreach (var profile in matchResult.possibleMatches)
+            {
+                if (profile != null && profile.ghostType == ghostType)
+                    return true;
+            }
+
+            return false;
+        }
+
+        static bool TryGetEvidenceByIndex(int index, out EvidenceType evidenceType)
+        {
+            switch (index)
+            {
+                case 0:
+                    evidenceType = EvidenceType.EMFSpike;
+                    return true;
+                case 1:
+                    evidenceType = EvidenceType.FreezingTemperature;
+                    return true;
+                case 2:
+                    evidenceType = EvidenceType.SpectralTrace;
+                    return true;
+                default:
+                    evidenceType = default;
+                    return false;
+            }
         }
 
         static string FormatEvidenceName(EvidenceType evidenceType)

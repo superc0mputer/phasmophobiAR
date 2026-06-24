@@ -13,6 +13,9 @@ namespace PhasmophobiAR.Game
         [SerializeField]
         GhostCaseController m_GhostCaseController;
 
+        [SerializeField]
+        JournalEvidenceSelection m_JournalEvidenceSelection;
+
         GhostType m_SelectedGhostType;
         bool m_HasSelection;
 
@@ -41,10 +44,11 @@ namespace PhasmophobiAR.Game
                 Instance = null;
         }
 
-        public void Configure(EvidenceRegistry evidenceRegistry, GhostCaseController ghostCaseController)
+        public void Configure(EvidenceRegistry evidenceRegistry, GhostCaseController ghostCaseController, JournalEvidenceSelection journalEvidenceSelection = null)
         {
             m_EvidenceRegistry = evidenceRegistry ?? m_EvidenceRegistry;
             m_GhostCaseController = ghostCaseController ?? m_GhostCaseController;
+            m_JournalEvidenceSelection = journalEvidenceSelection ?? m_JournalEvidenceSelection;
         }
 
         public void SelectGhost(GhostType ghostType)
@@ -69,9 +73,11 @@ namespace PhasmophobiAR.Game
             if (m_GhostCaseController != null)
                 m_GhostCaseController.EnsureCase();
 
-            var recordedEvidence = m_EvidenceRegistry != null
-                ? m_EvidenceRegistry.GetRecordedEvidenceSnapshot()
-                : Array.Empty<EvidenceType>();
+            var recordedEvidence = m_JournalEvidenceSelection != null
+                ? m_JournalEvidenceSelection.GetSelectedEvidenceSnapshot()
+                : m_EvidenceRegistry != null
+                    ? m_EvidenceRegistry.GetRecordedEvidenceSnapshot()
+                    : Array.Empty<EvidenceType>();
             var matchResult = GhostEvidenceMatcher.Match(recordedEvidence);
             var possibleGhostTypes = new GhostType[matchResult.possibleMatches.Length];
             for (var i = 0; i < matchResult.possibleMatches.Length; i++)
@@ -97,6 +103,9 @@ namespace PhasmophobiAR.Game
 
             if (m_GhostCaseController == null)
                 m_GhostCaseController = GhostCaseController.Instance;
+
+            if (m_JournalEvidenceSelection == null)
+                m_JournalEvidenceSelection = JournalEvidenceSelection.Instance;
         }
     }
 }
