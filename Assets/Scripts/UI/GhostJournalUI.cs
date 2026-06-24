@@ -76,6 +76,9 @@ namespace PhasmophobiAR.UI
         TMP_Text[] m_GhostSelectionLabels;
 
         [SerializeField]
+        Image[] m_GhostCrossoutImages;
+
+        [SerializeField]
         Button m_SubmitButton;
 
         [SerializeField]
@@ -128,6 +131,7 @@ namespace PhasmophobiAR.UI
             TMP_Text selectedGhostText,
             Button[] ghostSelectionButtons,
             TMP_Text[] ghostSelectionLabels,
+            Image[] ghostCrossoutImages,
             Button submitButton,
             TMP_Text referenceText,
             TMP_Text casesText)
@@ -154,6 +158,7 @@ namespace PhasmophobiAR.UI
             m_SelectedGhostText = selectedGhostText ?? m_SelectedGhostText;
             m_GhostSelectionButtons = ghostSelectionButtons ?? m_GhostSelectionButtons;
             m_GhostSelectionLabels = ghostSelectionLabels ?? m_GhostSelectionLabels;
+            m_GhostCrossoutImages = ghostCrossoutImages ?? m_GhostCrossoutImages;
             m_SubmitButton = submitButton ?? m_SubmitButton;
             m_ReferenceText = referenceText ?? m_ReferenceText;
             m_CasesText = casesText ?? m_CasesText;
@@ -430,7 +435,7 @@ namespace PhasmophobiAR.UI
             var matchResult = GhostEvidenceMatcher.Match(evidence);
 
             if (m_EvidenceText != null)
-                m_EvidenceText.text = "Evidence marked:";
+                m_EvidenceText.text = "Evidence";
 
             RefreshEvidenceButtons();
             RefreshGhostSelectionButtons(matchResult);
@@ -543,6 +548,9 @@ namespace PhasmophobiAR.UI
                 label.text = isPossible
                     ? profile.displayName
                     : $"<s>{profile.displayName}</s>";
+
+                if (m_GhostCrossoutImages != null && i < m_GhostCrossoutImages.Length && m_GhostCrossoutImages[i] != null)
+                    m_GhostCrossoutImages[i].gameObject.SetActive(!isPossible);
             }
         }
 
@@ -567,7 +575,7 @@ namespace PhasmophobiAR.UI
             if (matchResult == null)
                 return "Ghosts:\nunknown";
 
-            var builder = new StringBuilder("Ghosts:");
+            var builder = new StringBuilder("Ghost Candidates:");
             foreach (var profile in GhostProfileCatalog.Profiles)
             {
                 var line = IsPossible(matchResult, profile.ghostType)
