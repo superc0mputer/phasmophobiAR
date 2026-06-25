@@ -4,6 +4,8 @@ namespace PhasmophobiAR.Game
     {
         Wanderer,
         ShyGhost,
-        FastGhost
+        FastGhost,
+        StaticGhost,
+        Mimic
     }
 }

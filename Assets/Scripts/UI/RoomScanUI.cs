@@ -110,20 +110,16 @@ namespace PhasmophobiAR.UI
                 m_ProgressSlider.value = snapshot.progress;
 
             if (m_ProgressText != null)
-                m_ProgressText.text = $"{Mathf.RoundToInt(snapshot.progress * 100f)}%";
+                m_ProgressText.text = $"SCAN {Mathf.RoundToInt(snapshot.progress * 100f)}%";
 
             if (m_TrackingText != null)
-                m_TrackingText.text = $"Tracking: {snapshot.confidence}";
+                m_TrackingText.text = $"Signal: {GetSignalLabel(snapshot.confidence)}";
 
             if (m_InstructionText != null)
-                m_InstructionText.text = snapshot.instruction;
+                m_InstructionText.text = GetPlayerInstruction(snapshot);
 
             if (m_RoomSignalsText != null)
-            {
-                var meshStatus = snapshot.hasLiDARMeshData ? $"Mesh: {snapshot.meshCount}/{snapshot.meshVertexCount}" : "Mesh: none";
-                var depthStatus = snapshot.hasDepthOcclusion ? "Depth: on" : "Depth: off";
-                m_RoomSignalsText.text = $"Surfaces: {snapshot.trackedPlaneCount}  Room detail: {GetRoomDetailLabel(snapshot)}  Bounds: {(snapshot.hasEstimatedBounds ? "yes" : "no")}  Spawn options: {snapshot.safeSpawnCount}  {meshStatus}  {depthStatus}";
-            }
+                m_RoomSignalsText.text = GetScanStatus(snapshot);
 
             if (m_StartInvestigationButton != null)
             {
@@ -145,6 +141,47 @@ namespace PhasmophobiAR.UI
                 return "low";
 
             return "none";
+        }
+
+        static string GetSignalLabel(TrackingConfidence confidence)
+        {
+            switch (confidence)
+            {
+                case TrackingConfidence.Good:
+                    return "stable";
+                case TrackingConfidence.Limited:
+                    return "flickering";
+                case TrackingConfidence.Poor:
+                    return "unstable";
+                default:
+                    return "searching";
+            }
+        }
+
+        static string GetPlayerInstruction(RoomScanController.ScanSnapshot snapshot)
+        {
+            if (snapshot.isReady)
+                return "The room has enough signal. Begin the hunt when you are ready.";
+
+            if (snapshot.confidence == TrackingConfidence.Unavailable || snapshot.confidence == TrackingConfidence.Poor)
+                return "Move slowly. Let the camera find edges, shelves, and corners.";
+
+            return snapshot.instruction;
+        }
+
+        static string GetScanStatus(RoomScanController.ScanSnapshot snapshot)
+        {
+            if (snapshot.isReady)
+                return "Room imprint locked. Ghost placement is ready.";
+
+            var detail = GetRoomDetailLabel(snapshot);
+            if (detail == "none" || detail == "low")
+                return "Searching for haunted anchors...";
+
+            if (!snapshot.hasEstimatedBounds)
+                return "Mapping walls and corners...";
+
+            return "Building the investigation space...";
         }
 
         void Subscribe()

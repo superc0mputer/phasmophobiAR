@@ -65,7 +65,7 @@ namespace PhasmophobiAR.Markers
             }
 
             Debug.Log($"Marker tool spawner enabled. Image manager: {(m_TrackedImageManager != null ? m_TrackedImageManager.name : "none")}. Definitions: {m_DefinitionsByMarkerName.Count}.");
-            SetStatus("Markers: waiting for detection");
+            SetStatus("Ready your tool cards.");
 
             if (m_TrackedImageManager != null)
                 m_TrackedImageManager.trackablesChanged.AddListener(OnTrackedImagesChanged);
@@ -89,12 +89,12 @@ namespace PhasmophobiAR.Markers
 
             if (phase != GamePhase.Investigation || m_TrackedImageManager == null)
             {
-                SetStatus("Markers: waiting for investigation");
+                SetStatus("Tool cards unlock after the scan.");
                 return;
             }
 
             Debug.Log($"Checking {m_TrackedImageManager.trackables.count} existing tracked image(s) for tool placement.");
-            SetStatus($"Markers: checking {m_TrackedImageManager.trackables.count} tracked image(s)");
+            SetStatus("Searching for tool cards...");
             foreach (var trackedImage in m_TrackedImageManager.trackables)
                 HandleTrackedImage(trackedImage, "existing");
         }
@@ -124,24 +124,24 @@ namespace PhasmophobiAR.Markers
             if (!TryGetDefinition(trackedImage, out var markerName, out var definition))
             {
                 Debug.Log($"Tracked image ignored. Name='{trackedImage.referenceImage.name}', textureGuid={trackedImage.referenceImage.textureGuid}, sourceImageId={trackedImage.trackableId}, size={trackedImage.size}, position={trackedImage.transform.position}, state={trackedImage.trackingState}. This image is not in the marker reference library.");
-                SetStatus($"Markers: ignored '{trackedImage.referenceImage.name}'");
+                SetStatus("Unknown card. Use an investigation tool marker.");
                 return;
             }
 
             Debug.Log($"Tool marker '{markerName}' {lifecycle}; state={trackedImage.trackingState}.");
-            SetStatus($"Markers: saw {definition.DisplayName} ({trackedImage.trackingState})");
+            SetStatus($"{definition.DisplayName} card detected.");
 
             if (m_GameStateManager != null && !m_GameStateManager.CanPlaceTools)
             {
                 Debug.Log($"Tool marker '{markerName}' ignored until investigation starts.");
-                SetStatus($"Markers: saw {definition.DisplayName}; start investigation to place it");
+                SetStatus($"Start the investigation to place {definition.DisplayName}.");
                 return;
             }
 
             if (trackedImage.trackingState != TrackingState.Tracking)
             {
                 Debug.Log($"Tool marker '{markerName}' is not currently tracking. Keeping existing tool stable.");
-                SetStatus($"Markers: {definition.DisplayName} is {trackedImage.trackingState}");
+                SetStatus($"Hold the {definition.DisplayName} card steady.");
                 return;
             }
 
@@ -150,13 +150,13 @@ namespace PhasmophobiAR.Markers
                 tool = SpawnTool(definition, trackedImage.transform);
                 m_SpawnedToolsByMarkerName[markerName] = tool;
                 Debug.Log($"Spawned {definition.DisplayName} for marker '{markerName}'.");
-                SetStatus($"Markers: spawned {definition.DisplayName}");
+                SetStatus($"{definition.DisplayName} placed.");
             }
             else
             {
                 ApplyPose(tool.transform, trackedImage.transform);
                 Debug.Log($"Updated {definition.DisplayName} pose from re-detected marker '{markerName}'.");
-                SetStatus($"Markers: updated {definition.DisplayName}");
+                SetStatus($"{definition.DisplayName} position refreshed.");
             }
         }
 
