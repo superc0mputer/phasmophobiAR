@@ -161,27 +161,33 @@ namespace PhasmophobiAR.UI
         static string GetPlayerInstruction(RoomScanController.ScanSnapshot snapshot)
         {
             if (snapshot.isReady)
-                return "The room has enough signal. Begin the hunt when you are ready.";
+                return "Room locked. Begin the hunt.";
 
             if (snapshot.confidence == TrackingConfidence.Unavailable || snapshot.confidence == TrackingConfidence.Poor)
-                return "Move slowly. Let the camera find edges, shelves, and corners.";
+                return "Move slowly across edges and corners.";
 
-            return snapshot.instruction;
+            if (snapshot.trackedPlaneCount == 0)
+                return "Find a surface.";
+
+            if (!snapshot.hasEstimatedBounds)
+                return "Sweep the room.";
+
+            return "Hold steady.";
         }
 
         static string GetScanStatus(RoomScanController.ScanSnapshot snapshot)
         {
             if (snapshot.isReady)
-                return "Room imprint locked. Ghost placement is ready.";
+                return "Ready";
 
             var detail = GetRoomDetailLabel(snapshot);
             if (detail == "none" || detail == "low")
-                return "Searching for haunted anchors...";
+                return "Searching";
 
             if (!snapshot.hasEstimatedBounds)
-                return "Mapping walls and corners...";
+                return "Mapping";
 
-            return "Building the investigation space...";
+            return "Scanning";
         }
 
         void Subscribe()
