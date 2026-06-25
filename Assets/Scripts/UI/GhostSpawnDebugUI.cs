@@ -15,14 +15,18 @@ namespace PhasmophobiAR.UI
         Button m_ToggleButton;
 
         [SerializeField]
+        GameObject m_DebugPanel;
+
+        [SerializeField]
         TMP_Text m_DebugText;
 
         bool m_IsVisible;
 
-        public void Configure(GameStateManager gameStateManager, Button toggleButton, TMP_Text debugText)
+        public void Configure(GameStateManager gameStateManager, Button toggleButton, GameObject debugPanel, TMP_Text debugText)
         {
             m_GameStateManager = gameStateManager ?? m_GameStateManager;
             m_ToggleButton = toggleButton ?? m_ToggleButton;
+            m_DebugPanel = debugPanel ?? m_DebugPanel;
             m_DebugText = debugText ?? m_DebugText;
 
             if (isActiveAndEnabled)
@@ -77,10 +81,12 @@ namespace PhasmophobiAR.UI
 
             if (m_DebugText != null)
             {
-                m_DebugText.gameObject.SetActive(m_IsVisible);
                 if (m_IsVisible)
                     m_DebugText.text = GhostSpawnController.LastSpawnDiagnostics;
             }
+
+            if (m_DebugPanel != null)
+                m_DebugPanel.SetActive(m_IsVisible);
         }
     }
 }
