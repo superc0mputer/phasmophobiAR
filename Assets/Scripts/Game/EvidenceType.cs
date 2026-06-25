@@ -4,6 +4,7 @@ namespace PhasmophobiAR.Game
     {
         EMFSpike,
         FreezingTemperature,
-        SpectralTrace
+        SpectralTrace,
+        SpiritResponse
     }
 }

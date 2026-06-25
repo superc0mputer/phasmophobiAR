@@ -16,8 +16,20 @@ namespace PhasmophobiAR.Game
             new GhostProfile(
                 GhostType.ShyGhost,
                 "Shy Ghost",
-                "A quiet haunting that chills the room and only briefly leaves spectral traces.",
+                "A quiet haunting that chills the room and answers through the spirit box.",
                 EvidenceType.FreezingTemperature,
+                EvidenceType.SpiritResponse),
+            new GhostProfile(
+                GhostType.StaticGhost,
+                "Static Ghost",
+                "A broken signal that appears through EMF surges and visual spectral noise.",
+                EvidenceType.EMFSpike,
+                EvidenceType.SpectralTrace),
+            new GhostProfile(
+                GhostType.Mimic,
+                "Mimic",
+                "A deceptive presence that answers back and leaves traces resembling other ghosts.",
+                EvidenceType.SpiritResponse,
                 EvidenceType.SpectralTrace),
             new GhostProfile(
                 GhostType.FastGhost,

@@ -614,6 +614,9 @@ namespace PhasmophobiAR.UI
                 case 2:
                     evidenceType = EvidenceType.SpectralTrace;
                     return true;
+                case 3:
+                    evidenceType = EvidenceType.SpiritResponse;
+                    return true;
                 default:
                     evidenceType = default;
                     return false;
@@ -630,6 +633,8 @@ namespace PhasmophobiAR.UI
                     return "Freezing Temperature";
                 case EvidenceType.SpectralTrace:
                     return "Spectral Trace";
+                case EvidenceType.SpiritResponse:
+                    return "Spirit Response";
                 default:
                     return evidenceType.ToString();
             }

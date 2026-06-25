@@ -78,10 +78,12 @@ namespace PhasmophobiAR.UI
                 : "None";
 
             var builder = new StringBuilder();
-            builder.AppendLine(result.isCorrect ? "Identification correct" : "Identification incorrect");
-            builder.AppendLine($"Ghost: {actual}");
-            builder.AppendLine($"Selected: {selected}");
-            builder.Append("Evidence: ");
+            builder.AppendLine(result.isCorrect ? "CASE CLOSED" : "CASE UNRESOLVED");
+            builder.AppendLine(result.isCorrect ? "Your identification matched the haunting." : "Your journal entry did not match the entity.");
+            builder.AppendLine();
+            builder.AppendLine($"Entity: {actual}");
+            builder.AppendLine($"Filed as: {selected}");
+            builder.Append("Evidence marked: ");
             builder.Append(FormatEvidence(result.recordedEvidence));
             m_ResultText.text = builder.ToString();
         }
@@ -101,10 +103,27 @@ namespace PhasmophobiAR.UI
             {
                 if (i > 0)
                     builder.Append(", ");
-                builder.Append(evidence[i]);
+                builder.Append(FormatEvidenceName(evidence[i]));
             }
 
             return builder.ToString();
+        }
+
+        static string FormatEvidenceName(EvidenceType evidenceType)
+        {
+            switch (evidenceType)
+            {
+                case EvidenceType.EMFSpike:
+                    return "EMF Spike";
+                case EvidenceType.FreezingTemperature:
+                    return "Freezing Temperature";
+                case EvidenceType.SpectralTrace:
+                    return "Spectral Trace";
+                case EvidenceType.SpiritResponse:
+                    return "Spirit Response";
+                default:
+                    return evidenceType.ToString();
+            }
         }
     }
 }

@@ -128,8 +128,23 @@ namespace PhasmophobiAR.UI
             if (m_CurrentModeText != null && m_ScannerModeManager != null)
             {
                 m_CurrentModeText.text = isInvestigation
-                    ? m_ScannerModeManager.CurrentMode.ToString() + " Mode"
-                    : m_ScannerModeManager.CurrentMode.ToString() + " Mode (Locked)";
+                    ? "Mode: " + GetModeLabel(m_ScannerModeManager.CurrentMode)
+                    : "Scanner offline";
+            }
+        }
+
+        static string GetModeLabel(ScannerMode mode)
+        {
+            switch (mode)
+            {
+                case ScannerMode.EMF:
+                    return "EMF";
+                case ScannerMode.Thermal:
+                    return "Thermal";
+                case ScannerMode.Spectral:
+                    return "Spectral";
+                default:
+                    return mode.ToString();
             }
         }
     }
