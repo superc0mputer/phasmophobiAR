@@ -28,6 +28,9 @@ namespace PhasmophobiAR.UI
         [SerializeField]
         EMFSignalController m_EMFSignalController;
 
+        [SerializeField]
+        ThermometerTool m_ThermometerTool;
+
         public void Configure(ScannerModeManager scannerModeManager, GameStateManager gameStateManager, Button switchModeButton, TMP_Text currentModeText)
         {
             Configure(scannerModeManager, gameStateManager, switchModeButton, currentModeText, null, null);
@@ -187,7 +190,7 @@ namespace PhasmophobiAR.UI
                     m_ModeReadoutText.color = SignalColor(emfValue / 5f);
                     break;
                 case ScannerMode.Thermal:
-                    var thermometer = FindAnyObjectByType<ThermometerTool>();
+                    var thermometer = GetThermometerTool();
                     if (thermometer != null)
                     {
                         m_ModeReadoutText.text = $"{thermometer.CurrentCelsius:0.0} C";
@@ -208,6 +211,14 @@ namespace PhasmophobiAR.UI
                     m_ModeReadoutText.color = new Color(0.82f, 0.92f, 0.86f, 1f);
                     break;
             }
+        }
+
+        ThermometerTool GetThermometerTool()
+        {
+            if (m_ThermometerTool == null)
+                m_ThermometerTool = FindAnyObjectByType<ThermometerTool>();
+
+            return m_ThermometerTool;
         }
 
         static string GetModeLabel(ScannerMode mode)

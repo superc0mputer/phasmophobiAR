@@ -6,7 +6,7 @@ namespace PhasmophobiAR.Game
     {
         public static void LogEditorSetupReminder()
         {
-            Debug.Log($"{nameof(RoomScanRuntimeBootstrap)} no longer creates scene objects at runtime. Use Tools/PhasmophobiAR/Create Scene Setup in the Unity Editor to author managers and UI before play.");
+            Debug.Log($"{nameof(RoomScanRuntimeBootstrap)} no longer creates scene objects at runtime. Add the PhasmophobiAR managers and UI prefabs to the scene in the Unity Editor before play.");
         }
     }
 }

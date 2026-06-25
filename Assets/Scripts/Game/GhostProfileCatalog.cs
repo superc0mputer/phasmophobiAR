@@ -49,7 +49,7 @@ namespace PhasmophobiAR.Game
                     return profile;
             }
 
-            return s_Profiles.Length > 0 ? s_Profiles[0] : null;
+            return null;
         }
 
         public static GhostType GetRandomGhostType(Random random)

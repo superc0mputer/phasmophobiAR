@@ -7,6 +7,7 @@ namespace PhasmophobiAR.Game
     public sealed class JournalCaseRepository : MonoBehaviour
     {
         const string k_PlayerPrefsKey = "PhasmophobiAR.Journal.CaseEntries.v1";
+        const int k_MaxSavedEntries = 30;
 
         [Serializable]
         sealed class CaseEntryList
@@ -70,6 +71,7 @@ namespace PhasmophobiAR.Game
                 return;
 
             m_Entries.Insert(0, new JournalCaseEntry(result));
+            TrimEntries();
             Save();
             EntriesChanged?.Invoke();
         }
@@ -92,12 +94,21 @@ namespace PhasmophobiAR.Game
             {
                 var list = JsonUtility.FromJson<CaseEntryList>(json);
                 if (list?.entries != null)
+                {
                     m_Entries.AddRange(list.entries);
+                    TrimEntries();
+                }
             }
             catch (Exception exception)
             {
                 Debug.LogWarning($"Failed to load journal case entries: {exception.Message}");
             }
+        }
+
+        void TrimEntries()
+        {
+            if (m_Entries.Count > k_MaxSavedEntries)
+                m_Entries.RemoveRange(k_MaxSavedEntries, m_Entries.Count - k_MaxSavedEntries);
         }
 
         void Save()
