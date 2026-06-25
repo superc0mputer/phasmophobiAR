@@ -405,7 +405,17 @@ namespace PhasmophobiAR.UI
 
         void SubmitIdentification()
         {
-            GameStateManager.Instance?.ShowResult();
+            var gameStateManager = GameStateManager.Instance;
+            if (gameStateManager == null)
+                return;
+
+            if (gameStateManager.CurrentPhase != GamePhase.Investigation)
+            {
+                Debug.LogWarning($"{nameof(GhostJournalUI)} blocked identification submission outside {nameof(GamePhase.Investigation)} phase.");
+                return;
+            }
+
+            gameStateManager.ShowResult();
         }
 
         void RefreshAll()
