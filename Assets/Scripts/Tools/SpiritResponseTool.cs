@@ -15,9 +15,6 @@ namespace PhasmophobiAR.Tools
         GameStateManager m_GameStateManager;
 
         [SerializeField]
-        GhostCaseController m_GhostCaseController;
-
-        [SerializeField]
         EvidenceRegistry m_EvidenceRegistry;
 
         [SerializeField]
@@ -35,6 +32,27 @@ namespace PhasmophobiAR.Tools
 
         [SerializeField]
         string m_ListeningText = "LISTENING...";
+
+        [SerializeField]
+        string[] m_DefaultResponses =
+        {
+            "I am here.",
+            "Behind you.",
+            "Leave.",
+            "Get out.",
+            "Cold...",
+            "Run.",
+            "I see you.",
+            "Do not stay.",
+            "Close.",
+            "Help me.",
+            "Turn around.",
+            "Not alone.",
+            "Listen closer.",
+            "Your voice is mine.",
+            "In the dark.",
+            "Come closer."
+        };
 
         [Header("3D UI")]
         [SerializeField]
@@ -57,9 +75,6 @@ namespace PhasmophobiAR.Tools
 
             if (m_GameStateManager == null)
                 m_GameStateManager = GameStateManager.Instance;
-
-            if (m_GhostCaseController == null)
-                m_GhostCaseController = GhostCaseController.Instance;
 
             if (m_EvidenceRegistry == null)
                 m_EvidenceRegistry = EvidenceRegistry.Instance;
@@ -123,12 +138,8 @@ namespace PhasmophobiAR.Tools
                 return;
             }
 
-            var profile = m_GhostCaseController != null ? m_GhostCaseController.CurrentProfile : null;
-            var canRespond = HasSpiritResponse(profile);
-            SetResponse(canRespond ? GetGhostPhrase(profile) : "...");
-
-            if (canRespond)
-                TryRecordSpiritResponseEvidence();
+            SetResponse(GetGhostPhrase());
+            TryRecordSpiritResponseEvidence();
         }
 
         bool TryGetNearestGhostDistance(out float nearestDistance)
@@ -156,45 +167,14 @@ namespace PhasmophobiAR.Tools
             return found;
         }
 
-        string GetGhostPhrase(GhostProfile profile)
+        string GetGhostPhrase()
         {
-            var phrases = GetPhrases(profile);
-            if (phrases == null || phrases.Length == 0)
+            if (m_DefaultResponses == null || m_DefaultResponses.Length == 0)
                 return "I am here.";
 
-            var phrase = phrases[m_ResponseIndex % phrases.Length];
+            var phrase = m_DefaultResponses[m_ResponseIndex % m_DefaultResponses.Length];
             m_ResponseIndex++;
             return phrase;
-        }
-
-        static string[] GetPhrases(GhostProfile profile)
-        {
-            if (profile == null)
-                return new[] { "I am here.", "Behind you.", "Leave." };
-
-            switch (profile.ghostType)
-            {
-                case GhostType.ShyGhost:
-                    return new[] { "I am close.", "Please leave.", "Cold..." };
-                case GhostType.Mimic:
-                    return new[] { "I can be anyone.", "Your voice is mine.", "Listen closer." };
-                default:
-                    return new[] { "I am here.", "Behind you.", "Leave." };
-            }
-        }
-
-        static bool HasSpiritResponse(GhostProfile profile)
-        {
-            if (profile == null || profile.requiredEvidence == null)
-                return false;
-
-            foreach (var evidenceType in profile.requiredEvidence)
-            {
-                if (evidenceType == EvidenceType.SpiritResponse)
-                    return true;
-            }
-
-            return false;
         }
 
         void TryRecordSpiritResponseEvidence()
