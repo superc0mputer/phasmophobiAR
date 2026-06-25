@@ -1,6 +1,5 @@
 using System;
 using PhasmophobiAR.Game;
-using PhasmophobiAR.Ghosts;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,15 +25,15 @@ namespace PhasmophobiAR.Scanning
 
         [Header("Tuning")]
         [SerializeField]
-        float m_MaxDistance = 8f;
-
-        [SerializeField]
-        float m_DirectionWeight = 0.6f; // how much direction affects signal (0-1)
+        EMFSignalSettings m_SignalSettings = new EMFSignalSettings();
 
         [SerializeField]
         float m_Smoothing = 8f;
 
         float m_CurrentValue;
+
+        public float CurrentValue => m_CurrentValue;
+        public int CurrentLevel => EMFSignalCalculator.ToEMFLevel(m_CurrentValue, m_SignalSettings);
 
         void Awake()
         {
@@ -93,6 +92,11 @@ namespace PhasmophobiAR.Scanning
                 return;
             }
 
+            var signal = EMFSignalCalculator.CalculateFromSpawnedGhosts(
+                m_ARCamera.transform.position,
+                m_ARCamera.transform.forward,
+                m_SignalSettings,
+                true);
             var ghosts = GhostSpawnController.GetSpawnedGhostInfos();
             if (ghosts == null || ghosts.Length == 0)
             {
@@ -125,7 +129,7 @@ namespace PhasmophobiAR.Scanning
                 if (strength > best) best = strength;
             }
 
-            SmoothTo(best);
+            SmoothTo(signal);
         }
 
         void SmoothTo(float target)

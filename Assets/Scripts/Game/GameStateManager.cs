@@ -100,6 +100,7 @@ namespace PhasmophobiAR.Game
         {
             m_HasCompletedRoomScan = false;
             m_LastRoomScanResult = null;
+            EvidenceRegistry.Instance?.Clear();
             SetPhase(GamePhase.Setup);
         }
 
