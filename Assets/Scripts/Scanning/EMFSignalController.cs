@@ -97,6 +97,37 @@ namespace PhasmophobiAR.Scanning
                 m_ARCamera.transform.forward,
                 m_SignalSettings,
                 true);
+            var ghosts = GhostSpawnController.GetSpawnedGhostInfos();
+            if (ghosts == null || ghosts.Length == 0)
+            {
+                SmoothTo(0f);
+                return;
+            }
+
+            // find nearest ghost by projected distance (horizontal)
+            var camPos = m_ARCamera.transform.position;
+            var camForward = m_ARCamera.transform.forward;
+
+            float best = 0f;
+            foreach (var ghost in ghosts)
+            {
+                if (ghost == null) continue;
+                var toGhost = ghost.WorldPosition - camPos;
+                var distance = toGhost.magnitude;
+                var projectedToGhost = Vector3.ProjectOnPlane(toGhost, Vector3.up);
+                var forwardProj = Vector3.ProjectOnPlane(camForward, Vector3.up);
+                if (projectedToGhost.sqrMagnitude < 0.001f || forwardProj.sqrMagnitude < 0.001f)
+                    continue;
+
+                var dir = projectedToGhost.normalized;
+                forwardProj.Normalize();
+                var angle = Vector3.Angle(forwardProj, dir);
+
+                float distanceFactor = Mathf.Clamp01(1f - (distance / m_MaxDistance));
+                float directionFactor = Mathf.Clamp01(Mathf.Cos(angle * Mathf.Deg2Rad));
+                float strength = distanceFactor * ( (1f - m_DirectionWeight) + m_DirectionWeight * directionFactor );
+                if (strength > best) best = strength;
+            }
 
             SmoothTo(signal);
         }

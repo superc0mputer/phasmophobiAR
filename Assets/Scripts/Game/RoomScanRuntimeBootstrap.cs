@@ -61,10 +61,11 @@ namespace PhasmophobiAR.Game
             var pointCloudManager = UnityEngine.Object.FindFirstObjectByType<ARPointCloudManager>();
             var meshManager = UnityEngine.Object.FindFirstObjectByType<ARMeshManager>();
             var occlusionManager = UnityEngine.Object.FindFirstObjectByType<AROcclusionManager>();
+            var anchorManager = GetOrCreateAnchorManager();
             var trackedImageManager = GetOrCreateTrackedImageManager();
             var toolDefinitions = MarkerToolDefaults.CreateDefinitions();
 
-            Debug.Log($"PhasmophobiAR bootstrap. Camera={(arCamera != null ? arCamera.name : "none")}, PlaneManager={(planeManager != null)}, TrackedImageManager={(trackedImageManager != null ? trackedImageManager.name : "none")}.");
+            Debug.Log($"PhasmophobiAR bootstrap. Camera={(arCamera != null ? arCamera.name : "none")}, PlaneManager={(planeManager != null)}, AnchorManager={(anchorManager != null)}, TrackedImageManager={(trackedImageManager != null ? trackedImageManager.name : "none")}.");
 
             var scanController = root.AddComponent<RoomScanController>();
             scanController.Configure(gameStateManager, arCamera, planeManager, pointCloudManager, meshManager, occlusionManager);
@@ -72,11 +73,32 @@ namespace PhasmophobiAR.Game
             var scannerModeManager = root.AddComponent<ScannerModeManager>();
 
             var ghostSpawnController = root.AddComponent<GhostSpawnController>();
-            _ = ghostSpawnController;
+            ghostSpawnController.Configure(gameStateManager, arCamera, anchorManager);
 
             CreateHud(root.transform, gameStateManager, scanController, scannerModeManager);
             GateTemplatePlacement(root.transform, gameStateManager);
             ConfigureMarkerToolPlacement(root, gameStateManager, trackedImageManager, toolDefinitions);
+        }
+
+        static ARAnchorManager GetOrCreateAnchorManager()
+        {
+            var anchorManager = UnityEngine.Object.FindFirstObjectByType<ARAnchorManager>();
+            if (anchorManager != null)
+            {
+                Debug.Log($"Found existing ARAnchorManager on {anchorManager.gameObject.name}.");
+                return anchorManager;
+            }
+
+            var xrOrigin = UnityEngine.Object.FindFirstObjectByType<XROrigin>();
+            if (xrOrigin == null)
+            {
+                Debug.LogWarning("No XROrigin found. Ghost anchors will fall back to plain world-space parents.");
+                return null;
+            }
+
+            anchorManager = xrOrigin.gameObject.AddComponent<ARAnchorManager>();
+            Debug.Log($"Created ARAnchorManager on {xrOrigin.gameObject.name}.");
+            return anchorManager;
         }
 
         static ARTrackedImageManager GetOrCreateTrackedImageManager()
@@ -113,16 +135,19 @@ namespace PhasmophobiAR.Game
             canvasObject.AddComponent<GraphicRaycaster>();
 
             var scanRoot = CreatePanel(canvasObject.transform, "Scan Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(620f, 202f));
-            var investigationRoot = CreatePanel(canvasObject.transform, "Investigation Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(520f, 112f));
+            scanRoot.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 1f);
+
+            var investigationRoot = CreatePanel(canvasObject.transform, "Investigation Panel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -44f), new Vector2(640f, 168f));
+            investigationRoot.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 1f);
 
             var scanTitle = CreateText(scanRoot.transform, "Scan Title", "Scan the room", 24, TextAlignmentOptions.Center);
             SetRect(scanTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -22f), new Vector2(480f, 32f));
 
             var trackingText = CreateText(scanRoot.transform, "Tracking Text", "Tracking: Unavailable", 18, TextAlignmentOptions.Left);
-            SetRect(trackingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -56f), new Vector2(220f, 28f));
+            SetRect(trackingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(134f, -56f), new Vector2(220f, 28f));
 
             var progressText = CreateText(scanRoot.transform, "Progress Text", "0%", 18, TextAlignmentOptions.Right);
-            SetRect(progressText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-24f, -56f), new Vector2(120f, 28f));
+            SetRect(progressText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-84f, -56f), new Vector2(120f, 28f));
 
             var slider = CreateSlider(scanRoot.transform);
             SetRect(slider.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(470f, 18f));
@@ -140,18 +165,18 @@ namespace PhasmophobiAR.Game
             var investigationText = CreateText(investigationRoot.transform, "Investigation Text", "Investigation started", 22, TextAlignmentOptions.Center);
             SetRect(investigationText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 18f), new Vector2(360f, 42f));
 
-            var scannerModeButton = CreateButton(investigationRoot.transform, "Switch Mode Button", "Switch Mode");
-            SetRect(scannerModeButton.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(80f, -18f), new Vector2(160f, 32f));
-
             var scannerModeText = CreateText(investigationRoot.transform, "Scanner Mode Text", "EMF Mode", 16, TextAlignmentOptions.Center);
-            SetRect(scannerModeText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-80f, -18f), new Vector2(160f, 32f));
+            SetRect(scannerModeText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(112f, -94f), new Vector2(176f, 30f));
+
+            var scannerModeButton = CreateButton(investigationRoot.transform, "Switch Mode Button", "Switch Mode");
+            SetRect(scannerModeButton.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-112f, -94f), new Vector2(176f, 34f));
 
             var scannerModeUI = investigationRoot.AddComponent<ScannerModeUI>();
             scannerModeUI.Configure(scannerModeManager, gameStateManager, scannerModeButton, scannerModeText);
 
             // EMF meter slider
             var emfSlider = CreateSlider(investigationRoot.transform);
-            SetRect(emfSlider.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -46f), new Vector2(260f, 14f));
+            SetRect(emfSlider.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -126f), new Vector2(360f, 14f));
             emfSlider.minValue = 0f;
             emfSlider.maxValue = 1f;
             emfSlider.value = 0f;
@@ -162,14 +187,35 @@ namespace PhasmophobiAR.Game
 
             // Spectral traces text
             var tracesText = CreateText(investigationRoot.transform, "Traces Text", "Traces: 0", 14, TextAlignmentOptions.Center);
-            SetRect(tracesText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -66f), new Vector2(200f, 20f));
+            SetRect(tracesText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -146f), new Vector2(220f, 20f));
 
             var spectralController = parent.gameObject.AddComponent<PhasmophobiAR.Scanning.SpectralTraceController>();
             spectralController.Configure(scannerModeManager, scanController, gameStateManager, Camera.main, tracesText);
             SetRect(investigationText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(420f, 34f));
 
             var markerStatusText = CreateText(investigationRoot.transform, "Marker Status Text", "Markers: waiting for detection", 15, TextAlignmentOptions.Center);
-            SetRect(markerStatusText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(480f, 26f));
+            markerStatusText.textWrappingMode = TextWrappingModes.Normal;
+            markerStatusText.overflowMode = TextOverflowModes.Ellipsis;
+            SetRect(markerStatusText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -62f), new Vector2(520f, 24f));
+
+            var ghostDebugButton = CreateButton(investigationRoot.transform, "Ghost Debug Button", "Ghost Debug");
+            SetRect(ghostDebugButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-72f, 18f), new Vector2(132f, 30f));
+
+            var ghostDebugPanel = CreatePanel(canvasObject.transform, "Ghost Debug Panel", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, 0f), new Vector2(360f, 420f));
+            ghostDebugPanel.GetComponent<RectTransform>().pivot = new Vector2(1f, 0.5f);
+            ghostDebugPanel.AddComponent<RectMask2D>();
+            ghostDebugPanel.SetActive(false);
+
+            var ghostDebugTitle = CreateText(ghostDebugPanel.transform, "Ghost Debug Title", "Ghost Debug", 18, TextAlignmentOptions.Left);
+            SetRect(ghostDebugTitle.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(180f, -28f), new Vector2(324f, 28f));
+
+            var ghostDebugText = CreateText(ghostDebugPanel.transform, "Ghost Debug Text", "Ghost spawn: no attempt yet.", 12, TextAlignmentOptions.TopLeft);
+            ghostDebugText.textWrappingMode = TextWrappingModes.Normal;
+            ghostDebugText.overflowMode = TextOverflowModes.Overflow;
+            SetRect(ghostDebugText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(180f, -226f), new Vector2(324f, 340f));
+
+            var ghostDebugUI = investigationRoot.AddComponent<GhostSpawnDebugUI>();
+            ghostDebugUI.Configure(gameStateManager, ghostDebugButton, ghostDebugPanel, ghostDebugText);
 
             var ui = canvasObject.AddComponent<RoomScanUI>();
             ui.Configure(gameStateManager, scanController, scanRoot, investigationRoot, slider, progressText, trackingText, instructionText, roomSignalsText, startButton);

@@ -476,64 +476,42 @@ namespace UnityEngine.XR.Templates.AR
             if (m_ARDebugMenu == null)
                 return;
 
-            float screenWidthInInches = Screen.width / Screen.dpi;
-
-            if (screenWidthInInches < 5)
+            if (m_ARDebugMenu.toolbar.TryGetComponent<RectTransform>(out var rect))
             {
-                Vector2 menuOffset = m_ShowObjectMenu ? m_ObjectMenuOffset : m_ObjectButtonOffset;
-
-                if (m_ARDebugMenu.toolbar.TryGetComponent<RectTransform>(out var rect))
-                {
-                    rect.anchorMin = new Vector2(0.5f, 0);
-                    rect.anchorMax = new Vector2(0.5f, 0);
-                    rect.eulerAngles = new Vector3(rect.eulerAngles.x, rect.eulerAngles.y, 90);
-                    rect.anchoredPosition = new Vector2(0, 20) + menuOffset;
-                }
-
-                if (m_ARDebugMenu.displayInfoMenuButton.TryGetComponent<RectTransform>(out var infoMenuButtonRect))
-                    infoMenuButtonRect.localEulerAngles = new Vector3(infoMenuButtonRect.localEulerAngles.x, infoMenuButtonRect.localEulerAngles.y, -90);
-
-                if (m_ARDebugMenu.displayConfigurationsMenuButton.TryGetComponent<RectTransform>(out var configurationsMenuButtonRect))
-                    configurationsMenuButtonRect.localEulerAngles = new Vector3(configurationsMenuButtonRect.localEulerAngles.x, configurationsMenuButtonRect.localEulerAngles.y, -90);
-
-                if (m_ARDebugMenu.displayCameraConfigurationsMenuButton.TryGetComponent<RectTransform>(out var cameraConfigurationsMenuButtonRect))
-                    cameraConfigurationsMenuButtonRect.localEulerAngles = new Vector3(cameraConfigurationsMenuButtonRect.localEulerAngles.x, cameraConfigurationsMenuButtonRect.localEulerAngles.y, -90);
-
-                if (m_ARDebugMenu.displayDebugOptionsMenuButton.TryGetComponent<RectTransform>(out var debugOptionsMenuButtonRect))
-                    debugOptionsMenuButtonRect.localEulerAngles = new Vector3(debugOptionsMenuButtonRect.localEulerAngles.x, debugOptionsMenuButtonRect.localEulerAngles.y, -90);
-
-                if (m_ARDebugMenu.infoMenu.TryGetComponent<RectTransform>(out var infoMenuRect))
-                {
-                    infoMenuRect.anchorMin = new Vector2(0.5f, 0);
-                    infoMenuRect.anchorMax = new Vector2(0.5f, 0);
-                    infoMenuRect.pivot = new Vector2(0.5f, 0);
-                    infoMenuRect.anchoredPosition = new Vector2(0, 150) + menuOffset;
-                }
-
-                if (m_ARDebugMenu.configurationMenu.TryGetComponent<RectTransform>(out var configurationsMenuRect))
-                {
-                    configurationsMenuRect.anchorMin = new Vector2(0.5f, 0);
-                    configurationsMenuRect.anchorMax = new Vector2(0.5f, 0);
-                    configurationsMenuRect.pivot = new Vector2(0.5f, 0);
-                    configurationsMenuRect.anchoredPosition = new Vector2(0, 150) + menuOffset;
-                }
-
-                if (m_ARDebugMenu.cameraConfigurationMenu.TryGetComponent<RectTransform>(out var cameraConfigurationsMenuRect))
-                {
-                    cameraConfigurationsMenuRect.anchorMin = new Vector2(0.5f, 0);
-                    cameraConfigurationsMenuRect.anchorMax = new Vector2(0.5f, 0);
-                    cameraConfigurationsMenuRect.pivot = new Vector2(0.5f, 0);
-                    cameraConfigurationsMenuRect.anchoredPosition = new Vector2(0, 150) + menuOffset;
-                }
-
-                if (m_ARDebugMenu.debugOptionsMenu.TryGetComponent<RectTransform>(out var debugOptionsMenuRect))
-                {
-                    debugOptionsMenuRect.anchorMin = new Vector2(0.5f, 0);
-                    debugOptionsMenuRect.anchorMax = new Vector2(0.5f, 0);
-                    debugOptionsMenuRect.pivot = new Vector2(0.5f, 0);
-                    debugOptionsMenuRect.anchoredPosition = new Vector2(0, 150) + menuOffset;
-                }
+                rect.anchorMin = Vector2.one;
+                rect.anchorMax = Vector2.one;
+                rect.pivot = Vector2.one;
+                rect.eulerAngles = Vector3.zero;
+                rect.anchoredPosition = new Vector2(-20f, -20f);
             }
+
+            if (m_ARDebugMenu.displayInfoMenuButton.TryGetComponent<RectTransform>(out var infoMenuButtonRect))
+                infoMenuButtonRect.localEulerAngles = Vector3.zero;
+
+            if (m_ARDebugMenu.displayConfigurationsMenuButton.TryGetComponent<RectTransform>(out var configurationsMenuButtonRect))
+                configurationsMenuButtonRect.localEulerAngles = Vector3.zero;
+
+            if (m_ARDebugMenu.displayCameraConfigurationsMenuButton.TryGetComponent<RectTransform>(out var cameraConfigurationsMenuButtonRect))
+                cameraConfigurationsMenuButtonRect.localEulerAngles = Vector3.zero;
+
+            if (m_ARDebugMenu.displayDebugOptionsMenuButton.TryGetComponent<RectTransform>(out var debugOptionsMenuButtonRect))
+                debugOptionsMenuButtonRect.localEulerAngles = Vector3.zero;
+
+            SetDebugMenuPanelRect(m_ARDebugMenu.infoMenu);
+            SetDebugMenuPanelRect(m_ARDebugMenu.configurationMenu);
+            SetDebugMenuPanelRect(m_ARDebugMenu.cameraConfigurationMenu);
+            SetDebugMenuPanelRect(m_ARDebugMenu.debugOptionsMenu);
+        }
+
+        static void SetDebugMenuPanelRect(GameObject menu)
+        {
+            if (menu == null || !menu.TryGetComponent<RectTransform>(out var rect))
+                return;
+
+            rect.anchorMin = Vector2.one;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = Vector2.one;
+            rect.anchoredPosition = new Vector2(-20f, -96f);
         }
 
         void OnPlaneChanged(ARTrackablesChangedEventArgs<ARPlane> eventArgs)
