@@ -4,6 +4,7 @@ The MVP marker cards live in `Assets/Resources/Markers` and are designed to look
 
 - `tool_emf_marker.png` maps to the EMF Reader.
 - `tool_thermometer_marker.png` maps to the Thermometer.
+- `tool_spirit_response_marker.png` maps to Spirit Response.
 
 Print each marker at roughly 12 cm wide. Keep the full black border visible and avoid glossy paper if tracking is unstable. Do not crop out the patterned background; those details help ARKit recognize the card.
 
