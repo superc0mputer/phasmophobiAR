@@ -116,26 +116,33 @@ namespace PhasmophobiAR.Scanning
                 return;
 
             var now = Time.time;
-            var ghosts = GhostSpawnController.GetSpawnedGhosts();
+            var ghosts = GhostSpawnController.GetSpawnedGhostInfos();
             if (ghosts == null || ghosts.Length == 0)
                 return;
 
             var camPos = m_ARCamera.transform.position;
-            var forwardProj = Vector3.ProjectOnPlane(m_ARCamera.transform.forward, Vector3.up).normalized;
+            var forwardProj = Vector3.ProjectOnPlane(m_ARCamera.transform.forward, Vector3.up);
+            if (forwardProj.sqrMagnitude < 0.001f)
+                return;
 
-            foreach (var t in ghosts)
+            forwardProj.Normalize();
+
+            foreach (var ghost in ghosts)
             {
-                if (t == null) continue;
+                if (ghost == null || ghost.ghostTransform == null) continue;
 
                 // Throttle per-ghost traces
-                m_LastTraceTime.TryGetValue(t, out var lastTime);
+                m_LastTraceTime.TryGetValue(ghost.ghostTransform, out var lastTime);
                 if (now - lastTime < m_TraceIntervalSeconds)
                     continue;
 
-                var toGhost = t.position - camPos;
+                var ghostPosition = ghost.WorldPosition;
+                var toGhost = ghostPosition - camPos;
                 var horiz = Vector3.ProjectOnPlane(toGhost, Vector3.up);
                 var distance = horiz.magnitude;
                 if (distance > m_MaxDistance)
+                    continue;
+                if (horiz.sqrMagnitude < 0.001f)
                     continue;
 
                 var dir = horiz.normalized;
@@ -144,9 +151,9 @@ namespace PhasmophobiAR.Scanning
                     continue;
 
                 // spawn a trace near the ghost, slightly offset so it appears on floor
-                var tracePos = t.position + Vector3.up * -0.1f;
+                var tracePos = ghostPosition + Vector3.up * -0.1f;
                 SpawnTrace(tracePos);
-                m_LastTraceTime[t] = now;
+                m_LastTraceTime[ghost.ghostTransform] = now;
             }
 
             UpdateTracesText();

@@ -93,7 +93,7 @@ namespace PhasmophobiAR.Scanning
                 return;
             }
 
-            var ghosts = GhostSpawnController.GetSpawnedGhosts();
+            var ghosts = GhostSpawnController.GetSpawnedGhostInfos();
             if (ghosts == null || ghosts.Length == 0)
             {
                 SmoothTo(0f);
@@ -105,13 +105,18 @@ namespace PhasmophobiAR.Scanning
             var camForward = m_ARCamera.transform.forward;
 
             float best = 0f;
-            foreach (var t in ghosts)
+            foreach (var ghost in ghosts)
             {
-                if (t == null) continue;
-                var toGhost = t.position - camPos;
+                if (ghost == null) continue;
+                var toGhost = ghost.WorldPosition - camPos;
                 var distance = toGhost.magnitude;
-                var dir = Vector3.ProjectOnPlane(toGhost, Vector3.up).normalized;
-                var forwardProj = Vector3.ProjectOnPlane(camForward, Vector3.up).normalized;
+                var projectedToGhost = Vector3.ProjectOnPlane(toGhost, Vector3.up);
+                var forwardProj = Vector3.ProjectOnPlane(camForward, Vector3.up);
+                if (projectedToGhost.sqrMagnitude < 0.001f || forwardProj.sqrMagnitude < 0.001f)
+                    continue;
+
+                var dir = projectedToGhost.normalized;
+                forwardProj.Normalize();
                 var angle = Vector3.Angle(forwardProj, dir);
 
                 float distanceFactor = Mathf.Clamp01(1f - (distance / m_MaxDistance));
