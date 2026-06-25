@@ -8,7 +8,7 @@ namespace PhasmophobiAR.Scanning
 {
     /// <summary>
     /// Computes an EMF signal strength based on camera-to-ghost distance and direction.
-    /// Updates a HUD slider when in EMF scanner mode.
+    /// Optionally updates a HUD slider when in EMF scanner mode.
     /// </summary>
     public sealed class EMFSignalController : MonoBehaviour
     {
@@ -80,7 +80,7 @@ namespace PhasmophobiAR.Scanning
 
         void Update()
         {
-            if (m_ScannerModeManager == null || m_ARCamera == null || m_EMFSlider == null)
+            if (m_ScannerModeManager == null || m_ARCamera == null)
                 return;
 
             if (m_ScannerModeManager.CurrentMode != ScannerMode.EMF)
