@@ -31,6 +31,9 @@ namespace PhasmophobiAR.UI
         [SerializeField]
         ThermometerTool m_ThermometerTool;
 
+        [SerializeField]
+        SpiritResponseTool m_SpiritResponseTool;
+
         public void Configure(ScannerModeManager scannerModeManager, GameStateManager gameStateManager, Button switchModeButton, TMP_Text currentModeText)
         {
             Configure(scannerModeManager, gameStateManager, switchModeButton, currentModeText, null, null);
@@ -86,6 +89,9 @@ namespace PhasmophobiAR.UI
 
             if (m_EMFSignalController == null)
                 m_EMFSignalController = FindAnyObjectByType<EMFSignalController>();
+
+            if (m_SpiritResponseTool == null)
+                m_SpiritResponseTool = FindAnyObjectByType<SpiritResponseTool>();
 
             if (changed)
                 SubscribeEvents();
@@ -206,6 +212,13 @@ namespace PhasmophobiAR.UI
                     m_ModeReadoutText.text = "SPECTRAL";
                     m_ModeReadoutText.color = new Color(0.65f, 0.9f, 1f, 1f);
                     break;
+                case ScannerMode.SpiritResponse:
+                    var spiritResponse = GetSpiritResponseTool();
+                    m_ModeReadoutText.text = spiritResponse != null
+                        ? spiritResponse.CurrentResponse
+                        : "LISTENING";
+                    m_ModeReadoutText.color = new Color(0.7f, 0.95f, 1f, 1f);
+                    break;
                 default:
                     m_ModeReadoutText.text = GetModeLabel(m_ScannerModeManager.CurrentMode).ToUpperInvariant();
                     m_ModeReadoutText.color = new Color(0.82f, 0.92f, 0.86f, 1f);
@@ -221,6 +234,14 @@ namespace PhasmophobiAR.UI
             return m_ThermometerTool;
         }
 
+        SpiritResponseTool GetSpiritResponseTool()
+        {
+            if (m_SpiritResponseTool == null)
+                m_SpiritResponseTool = FindAnyObjectByType<SpiritResponseTool>();
+
+            return m_SpiritResponseTool;
+        }
+
         static string GetModeLabel(ScannerMode mode)
         {
             switch (mode)
@@ -231,6 +252,8 @@ namespace PhasmophobiAR.UI
                     return "TEMP";
                 case ScannerMode.Spectral:
                     return "Spectral";
+                case ScannerMode.SpiritResponse:
+                    return "Spirit";
                 default:
                     return mode.ToString();
             }
