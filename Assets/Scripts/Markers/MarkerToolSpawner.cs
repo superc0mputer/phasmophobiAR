@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PhasmophobiAR.Game;
+using PhasmophobiAR.Tools;
 using TMPro;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
@@ -187,6 +188,10 @@ namespace PhasmophobiAR.Markers
                 case MarkerToolType.Thermometer:
                     CreateThermometerVisual(root.transform);
                     break;
+                case MarkerToolType.SpiritResponse:
+                    CreateSpiritResponseVisual(root.transform);
+                    root.AddComponent<SpiritResponseTool>();
+                    break;
                 default:
                     CreateEMFVisual(root.transform);
                     break;
@@ -230,6 +235,31 @@ namespace PhasmophobiAR.Markers
             SetColor(display, new Color(0.2f, 0.7f, 1f));
         }
 
+        static void CreateSpiritResponseVisual(Transform parent)
+        {
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "Spirit Response Body";
+            body.transform.SetParent(parent, false);
+            body.transform.localPosition = new Vector3(0f, 0.035f, 0f);
+            body.transform.localScale = new Vector3(0.095f, 0.018f, 0.115f);
+            SetColor(body, new Color(0.06f, 0.05f, 0.09f));
+
+            var speaker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            speaker.name = "Spirit Response Speaker";
+            speaker.transform.SetParent(parent, false);
+            speaker.transform.localPosition = new Vector3(0f, 0.052f, 0.022f);
+            speaker.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            speaker.transform.localScale = new Vector3(0.026f, 0.006f, 0.026f);
+            SetColor(speaker, new Color(0.22f, 0.18f, 0.32f));
+
+            var display = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            display.name = "Spirit Response Display";
+            display.transform.SetParent(parent, false);
+            display.transform.localPosition = new Vector3(0f, 0.053f, -0.025f);
+            display.transform.localScale = new Vector3(0.06f, 0.006f, 0.028f);
+            SetColor(display, new Color(0.55f, 0.9f, 1f));
+        }
+
         static void SetColor(GameObject gameObject, Color color)
         {
             var renderer = gameObject.GetComponent<Renderer>();
@@ -262,6 +292,12 @@ namespace PhasmophobiAR.Markers
                 && m_DefinitionsByMarkerName.TryGetValue(MarkerToolDefaults.ThermometerMarkerName, out var thermometerDefinition))
             {
                 m_DefinitionsByTextureGuid[thermometerGuid] = thermometerDefinition;
+            }
+
+            if (Guid.TryParse(MarkerToolDefaults.SpiritResponseMarkerTextureGuid, out var spiritResponseGuid)
+                && m_DefinitionsByMarkerName.TryGetValue(MarkerToolDefaults.SpiritResponseMarkerName, out var spiritResponseDefinition))
+            {
+                m_DefinitionsByTextureGuid[spiritResponseGuid] = spiritResponseDefinition;
             }
         }
 
