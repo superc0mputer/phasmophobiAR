@@ -36,8 +36,8 @@ namespace PhasmophobiAR.UI
 
             if (m_ResetButton != null)
             {
-                m_ResetButton.onClick.RemoveListener(ResetRound);
-                m_ResetButton.onClick.AddListener(ResetRound);
+                m_ResetButton.onClick.RemoveListener(PlayAgain);
+                m_ResetButton.onClick.AddListener(PlayAgain);
             }
         }
 
@@ -50,7 +50,7 @@ namespace PhasmophobiAR.UI
             }
 
             if (m_ResetButton != null)
-                m_ResetButton.onClick.RemoveListener(ResetRound);
+                m_ResetButton.onClick.RemoveListener(PlayAgain);
         }
 
         public void Configure(GameStateManager gameStateManager, GameObject resultRoot, TMP_Text resultText, Button resetButton)
@@ -88,9 +88,9 @@ namespace PhasmophobiAR.UI
             m_ResultText.text = builder.ToString();
         }
 
-        void ResetRound()
+        void PlayAgain()
         {
-            m_GameStateManager?.ResetRound();
+            m_GameStateManager?.PlayAgain();
         }
 
         static string FormatEvidence(EvidenceType[] evidence)
