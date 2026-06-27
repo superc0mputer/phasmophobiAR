@@ -25,6 +25,9 @@ namespace PhasmophobiAR.UI
         IdentificationController m_IdentificationController;
 
         [SerializeField]
+        GameStateManager m_GameStateManager;
+
+        [SerializeField]
         JournalCaseRepository m_CaseRepository;
 
         [SerializeField]
@@ -35,6 +38,9 @@ namespace PhasmophobiAR.UI
 
         [SerializeField]
         Button m_CloseButton;
+
+        [SerializeField]
+        Button m_RestartButton;
 
         [SerializeField]
         Button m_InvestigationTabButton;
@@ -95,6 +101,7 @@ namespace PhasmophobiAR.UI
         void Awake()
         {
             ResolveReferences();
+            EnsureRestartButton();
             SetOpen(m_StartOpen);
             BuildStaticLabels();
         }
@@ -134,7 +141,8 @@ namespace PhasmophobiAR.UI
             Image[] ghostCrossoutImages,
             Button submitButton,
             TMP_Text referenceText,
-            TMP_Text casesText)
+            TMP_Text casesText,
+            Button restartButton = null)
         {
             Unsubscribe();
 
@@ -145,6 +153,7 @@ namespace PhasmophobiAR.UI
             m_JournalRoot = journalRoot ?? m_JournalRoot;
             m_OpenButton = openButton ?? m_OpenButton;
             m_CloseButton = closeButton ?? m_CloseButton;
+            m_RestartButton = restartButton ?? m_RestartButton;
             m_InvestigationTabButton = investigationTabButton ?? m_InvestigationTabButton;
             m_ReferenceTabButton = referenceTabButton ?? m_ReferenceTabButton;
             m_CasesTabButton = casesTabButton ?? m_CasesTabButton;
@@ -164,6 +173,7 @@ namespace PhasmophobiAR.UI
             m_CasesText = casesText ?? m_CasesText;
 
             BuildStaticLabels();
+            EnsureRestartButton();
             Subscribe();
             RefreshAll();
         }
@@ -182,6 +192,12 @@ namespace PhasmophobiAR.UI
             {
                 m_CloseButton.onClick.RemoveListener(Close);
                 m_CloseButton.onClick.AddListener(Close);
+            }
+
+            if (m_RestartButton != null)
+            {
+                m_RestartButton.onClick.RemoveListener(RestartRound);
+                m_RestartButton.onClick.AddListener(RestartRound);
             }
 
             if (m_InvestigationTabButton != null)
@@ -228,6 +244,12 @@ namespace PhasmophobiAR.UI
                 m_CaseRepository.EntriesChanged -= RefreshCasesPage;
                 m_CaseRepository.EntriesChanged += RefreshCasesPage;
             }
+
+            if (m_GameStateManager != null)
+            {
+                m_GameStateManager.PhaseChanged -= OnGamePhaseChanged;
+                m_GameStateManager.PhaseChanged += OnGamePhaseChanged;
+            }
         }
 
         void Unsubscribe()
@@ -236,6 +258,8 @@ namespace PhasmophobiAR.UI
                 m_OpenButton.onClick.RemoveListener(Open);
             if (m_CloseButton != null)
                 m_CloseButton.onClick.RemoveListener(Close);
+            if (m_RestartButton != null)
+                m_RestartButton.onClick.RemoveListener(RestartRound);
             if (m_InvestigationTabButton != null)
                 m_InvestigationTabButton.onClick.RemoveListener(ShowInvestigationPage);
             if (m_ReferenceTabButton != null)
@@ -269,6 +293,8 @@ namespace PhasmophobiAR.UI
                 m_IdentificationController.SelectionChanged -= RefreshInvestigationPage;
             if (m_CaseRepository != null)
                 m_CaseRepository.EntriesChanged -= RefreshCasesPage;
+            if (m_GameStateManager != null)
+                m_GameStateManager.PhaseChanged -= OnGamePhaseChanged;
         }
 
         void WireGhostSelectionButtons()
@@ -365,6 +391,21 @@ namespace PhasmophobiAR.UI
 
             if (isOpen)
                 RefreshAll();
+        }
+
+        void OnGamePhaseChanged(GamePhase phase)
+        {
+            Close();
+        }
+
+        void RestartRound()
+        {
+            Close();
+
+            if (m_GameStateManager == null)
+                m_GameStateManager = GameStateManager.Instance;
+
+            m_GameStateManager?.PlayAgain();
         }
 
         void ShowInvestigationPage()
@@ -520,8 +561,35 @@ namespace PhasmophobiAR.UI
                 m_JournalEvidenceSelection = JournalEvidenceSelection.Instance;
             if (m_IdentificationController == null)
                 m_IdentificationController = IdentificationController.Instance;
+            if (m_GameStateManager == null)
+                m_GameStateManager = GameStateManager.Instance;
             if (m_CaseRepository == null)
                 m_CaseRepository = JournalCaseRepository.Instance;
+        }
+
+        void EnsureRestartButton()
+        {
+            if (m_RestartButton != null || m_CloseButton == null || m_JournalRoot == null)
+                return;
+
+            var restartObject = Instantiate(m_CloseButton.gameObject, m_JournalRoot.transform);
+            restartObject.name = "Restart Journal Button";
+            m_RestartButton = restartObject.GetComponent<Button>();
+            if (m_RestartButton != null)
+                m_RestartButton.onClick.RemoveAllListeners();
+
+            var rectTransform = restartObject.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchorMin = new Vector2(0f, 1f);
+                rectTransform.anchorMax = new Vector2(0f, 1f);
+                rectTransform.anchoredPosition = new Vector2(86f, -34f);
+                rectTransform.sizeDelta = new Vector2(84f, 24f);
+            }
+
+            var label = restartObject.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+                label.text = "Restart";
         }
 
         void RefreshEvidenceButtons()
