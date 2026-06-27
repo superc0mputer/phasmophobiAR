@@ -74,6 +74,12 @@ namespace PhasmophobiAR.Ghosts
         float m_MinimumCandidateSeparationMeters = 0.5f;
 
         [SerializeField]
+        bool m_RandomizeSpawnCandidateOrder = true;
+
+        [SerializeField]
+        int m_RandomizedSpawnCandidatePoolSize = 4;
+
+        [SerializeField]
         float m_MaxHeightAboveCameraMeters = 0.75f;
 
         [SerializeField]
@@ -255,6 +261,7 @@ namespace PhasmophobiAR.Ghosts
 
             var diagnostics = new SpawnDiagnostics();
             var spawnCandidates = BuildSpawnCandidates(scanResult, diagnostics);
+            RandomizeSpawnCandidateOrder(spawnCandidates);
             var spawnCount = Mathf.Max(1, m_SpawnCount);
             var spawnedCount = 0;
 
@@ -331,6 +338,25 @@ namespace PhasmophobiAR.Ghosts
                 candidates.Add(cameraFallback);
 
             return candidates;
+        }
+
+        void RandomizeSpawnCandidateOrder(List<SpawnCandidate> candidates)
+        {
+            if (!m_RandomizeSpawnCandidateOrder || candidates == null || candidates.Count <= 1)
+                return;
+
+            candidates.Sort((left, right) => right.score.CompareTo(left.score));
+            var poolSize = Mathf.Clamp(m_RandomizedSpawnCandidatePoolSize, 1, candidates.Count);
+            for (var i = 0; i < poolSize - 1; i++)
+            {
+                var swapIndex = UnityEngine.Random.Range(i, poolSize);
+                if (swapIndex == i)
+                    continue;
+
+                var candidate = candidates[i];
+                candidates[i] = candidates[swapIndex];
+                candidates[swapIndex] = candidate;
+            }
         }
 
         void AddScanCandidates(RoomScanResult scanResult, List<SpawnCandidate> candidates, SpawnDiagnostics diagnostics)
