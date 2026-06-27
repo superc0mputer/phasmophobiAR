@@ -54,12 +54,14 @@ namespace PhasmophobiAR.Scanning
                     }
                 }
 
-                var strength = distanceFactor * ((1f - directionWeight) + directionWeight * directionFactor);
+                var strength = distanceFactor
+                    * ((1f - directionWeight) + directionWeight * directionFactor)
+                    * GhostBehaviorController.GetEMFSignalMultiplier(ghost);
                 if (strength > best)
                     best = strength;
             }
 
-            return best;
+            return Mathf.Clamp01(best);
         }
 
         public static int ToEMFLevel(float signal, EMFSignalSettings settings)

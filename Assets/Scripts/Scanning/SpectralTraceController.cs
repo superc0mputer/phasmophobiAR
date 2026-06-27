@@ -151,9 +151,16 @@ namespace PhasmophobiAR.Scanning
             {
                 if (ghost == null || ghost.ghostTransform == null) continue;
 
+                var behavior = GhostBehaviorController.Get(ghost.ghostTransform);
+                if (behavior != null && !behavior.IsVisible)
+                    continue;
+
+                var spectralMultiplier = behavior != null ? behavior.SpectralTraceMultiplier : 1f;
+                var traceInterval = Mathf.Max(0.1f, m_TraceIntervalSeconds / Mathf.Max(0.01f, spectralMultiplier));
+
                 // Throttle per-ghost traces
                 m_LastTraceTime.TryGetValue(ghost.ghostTransform, out var lastTime);
-                if (now - lastTime < m_TraceIntervalSeconds)
+                if (now - lastTime < traceInterval)
                     continue;
 
                 var ghostPosition = ghost.WorldPosition;
@@ -172,24 +179,25 @@ namespace PhasmophobiAR.Scanning
 
                 // spawn a trace near the ghost, slightly offset so it appears on floor
                 var tracePos = ghostPosition + Vector3.up * -0.1f;
-                SpawnTrace(tracePos);
+                SpawnTrace(tracePos, spectralMultiplier);
                 m_LastTraceTime[ghost.ghostTransform] = now;
             }
 
             UpdateTracesText();
         }
 
-        void SpawnTrace(Vector3 position)
+        void SpawnTrace(Vector3 position, float spectralMultiplier)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.transform.position = position;
-            go.transform.localScale = Vector3.one * 0.08f;
+            go.transform.localScale = Vector3.one * Mathf.Lerp(0.06f, 0.12f, Mathf.Clamp01((spectralMultiplier - 0.5f) / 1.5f));
             go.transform.SetParent(transform, true);
             var rend = go.GetComponent<Renderer>();
             if (rend != null)
             {
                 rend.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                rend.material.SetColor("_BaseColor", new Color(0.6f, 0.9f, 1f, 0.9f));
+                var alpha = Mathf.Lerp(0.55f, 0.95f, Mathf.Clamp01((spectralMultiplier - 0.5f) / 1.5f));
+                rend.material.SetColor("_BaseColor", new Color(0.6f, 0.9f, 1f, alpha));
                 rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 rend.receiveShadows = false;
             }

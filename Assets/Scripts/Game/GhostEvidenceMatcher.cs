@@ -14,7 +14,7 @@ namespace PhasmophobiAR.Game
             }
 
             var matches = new List<GhostProfile>();
-            foreach (var profile in GhostProfileCatalog.Profiles)
+            foreach (var profile in GhostProfileCatalog.GetMvpSelectableProfiles())
             {
                 if (profile == null || profile.requiredEvidence == null)
                     continue;

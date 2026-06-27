@@ -276,6 +276,7 @@ namespace PhasmophobiAR.UI
             if (m_GhostSelectionButtons == null)
                 return;
 
+            var profiles = GhostProfileCatalog.GetMvpSelectableProfiles();
             for (var i = 0; i < m_GhostSelectionButtons.Length; i++)
             {
                 var button = m_GhostSelectionButtons[i];
@@ -283,13 +284,13 @@ namespace PhasmophobiAR.UI
                     continue;
 
                 button.onClick.RemoveAllListeners();
-                if (i >= GhostProfileCatalog.Profiles.Count)
+                if (i >= profiles.Length)
                 {
                     button.gameObject.SetActive(false);
                     continue;
                 }
 
-                var ghostType = GhostProfileCatalog.Profiles[i].ghostType;
+                var ghostType = profiles[i].ghostType;
                 button.onClick.AddListener(() => SelectGhost(ghostType));
             }
         }
@@ -321,13 +322,14 @@ namespace PhasmophobiAR.UI
         {
             if (m_GhostSelectionLabels != null)
             {
+                var profiles = GhostProfileCatalog.GetMvpSelectableProfiles();
                 for (var i = 0; i < m_GhostSelectionLabels.Length; i++)
                 {
                     if (m_GhostSelectionLabels[i] == null)
                         continue;
 
-                    m_GhostSelectionLabels[i].text = i < GhostProfileCatalog.Profiles.Count
-                        ? GhostProfileCatalog.Profiles[i].displayName
+                    m_GhostSelectionLabels[i].text = i < profiles.Length
+                        ? profiles[i].displayName
                         : string.Empty;
                 }
             }
@@ -471,12 +473,16 @@ namespace PhasmophobiAR.UI
                 return;
 
             var builder = new StringBuilder();
-            foreach (var profile in GhostProfileCatalog.Profiles)
+            foreach (var profile in GhostProfileCatalog.GetMvpSelectableProfiles())
             {
                 builder.AppendLine(profile.displayName);
                 builder.AppendLine(profile.description);
+                if (!string.IsNullOrEmpty(profile.behaviorSummary))
+                    builder.AppendLine(profile.behaviorSummary);
                 builder.Append("Evidence: ");
                 builder.AppendLine(FormatEvidenceInline(profile.requiredEvidence));
+                builder.AppendLine($"Reveal difficulty: {FormatDifficulty(profile.revealDifficulty)}");
+                builder.AppendLine($"Capture difficulty: {FormatDifficulty(profile.captureDifficulty)}");
                 builder.AppendLine();
             }
 
@@ -547,13 +553,14 @@ namespace PhasmophobiAR.UI
             if (m_GhostSelectionLabels == null)
                 return;
 
+            var profiles = GhostProfileCatalog.GetMvpSelectableProfiles();
             for (var i = 0; i < m_GhostSelectionLabels.Length; i++)
             {
                 var label = m_GhostSelectionLabels[i];
-                if (label == null || i >= GhostProfileCatalog.Profiles.Count)
+                if (label == null || i >= profiles.Length)
                     continue;
 
-                var profile = GhostProfileCatalog.Profiles[i];
+                var profile = profiles[i];
                 var isPossible = IsPossible(matchResult, profile.ghostType);
                 label.text = isPossible
                     ? profile.displayName
@@ -586,7 +593,7 @@ namespace PhasmophobiAR.UI
                 return "Ghosts:\nunknown";
 
             var builder = new StringBuilder("Ghost Candidates:");
-            foreach (var profile in GhostProfileCatalog.Profiles)
+            foreach (var profile in GhostProfileCatalog.GetMvpSelectableProfiles())
             {
                 var line = IsPossible(matchResult, profile.ghostType)
                     ? profile.displayName
@@ -648,6 +655,17 @@ namespace PhasmophobiAR.UI
                 default:
                     return evidenceType.ToString();
             }
+        }
+
+        static string FormatDifficulty(float difficulty)
+        {
+            difficulty = Mathf.Clamp01(difficulty);
+            if (difficulty < 0.4f)
+                return "Low";
+            if (difficulty < 0.7f)
+                return "Moderate";
+
+            return "High";
         }
     }
 }
