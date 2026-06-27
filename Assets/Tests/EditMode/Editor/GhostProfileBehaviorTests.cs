@@ -37,6 +37,26 @@ namespace PhasmophobiAR.Tests.EditMode
         }
 
         [Test]
+        public void RandomGhostSelectionUsesOnlyMvpSelectableProfiles()
+        {
+            var random = new System.Random(7);
+            for (var i = 0; i < 100; i++)
+            {
+                var ghostType = GhostProfileCatalog.GetRandomGhostType(random);
+                Assert.IsTrue(IsMvpSelectable(ghostType), $"{ghostType} should not be selected for MVP rounds.");
+            }
+        }
+
+        [Test]
+        public void EvidenceMatcherReturnsOnlyMvpSelectableProfiles()
+        {
+            var matchResult = GhostEvidenceMatcher.Match(null);
+
+            foreach (var profile in matchResult.possibleMatches)
+                Assert.IsTrue(IsMvpSelectable(profile.ghostType), $"{profile.ghostType} should not appear in MVP journal candidates.");
+        }
+
+        [Test]
         public void EmfSignalUsesProfileMultiplier()
         {
             var neutral = CreateGhost("neutral", null, new Vector3(0f, 0f, 1f));
@@ -93,6 +113,17 @@ namespace PhasmophobiAR.Tests.EditMode
             var behavior = ghost.AddComponent<GhostBehaviorController>();
             behavior.Configure(profile, null);
             return ghost;
+        }
+
+        static bool IsMvpSelectable(GhostType ghostType)
+        {
+            foreach (var selectable in GhostProfileCatalog.MvpSelectableGhostTypes)
+            {
+                if (selectable == ghostType)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

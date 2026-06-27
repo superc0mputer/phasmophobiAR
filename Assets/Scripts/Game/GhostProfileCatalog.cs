@@ -89,7 +89,29 @@ namespace PhasmophobiAR.Game
                 EvidenceType.FreezingTemperature)
         };
 
+        static readonly GhostType[] s_MvpSelectableGhostTypes =
+        {
+            GhostType.Wanderer,
+            GhostType.ShyGhost,
+            GhostType.StaticGhost
+        };
+
         public static IReadOnlyList<GhostProfile> Profiles => s_Profiles;
+
+        public static IReadOnlyList<GhostType> MvpSelectableGhostTypes => s_MvpSelectableGhostTypes;
+
+        public static GhostProfile[] GetMvpSelectableProfiles()
+        {
+            var profiles = new List<GhostProfile>();
+            foreach (var ghostType in s_MvpSelectableGhostTypes)
+            {
+                var profile = GetProfile(ghostType);
+                if (profile != null)
+                    profiles.Add(profile);
+            }
+
+            return profiles.ToArray();
+        }
 
         public static GhostProfile GetProfile(GhostType ghostType)
         {
@@ -104,13 +126,13 @@ namespace PhasmophobiAR.Game
 
         public static GhostType GetRandomGhostType(Random random)
         {
-            if (s_Profiles.Length == 0)
+            if (s_MvpSelectableGhostTypes.Length == 0)
                 return default;
 
             if (random == null)
                 random = new Random();
 
-            return s_Profiles[random.Next(0, s_Profiles.Length)].ghostType;
+            return s_MvpSelectableGhostTypes[random.Next(0, s_MvpSelectableGhostTypes.Length)];
         }
     }
 }
