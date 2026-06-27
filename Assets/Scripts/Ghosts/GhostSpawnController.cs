@@ -281,6 +281,7 @@ namespace PhasmophobiAR.Ghosts
                 var ghost = Instantiate(m_GhostPrefab, parent);
                 ghost.transform.localPosition = Vector3.zero;
                 ghost.transform.localRotation = Quaternion.identity;
+                ConfigureGhostBehavior(ghost);
 
                 var info = new GhostSpawnInfo
                 {
@@ -317,6 +318,21 @@ namespace PhasmophobiAR.Ghosts
 
             m_GhostPrefab = Resources.Load<GameObject>("Ghost");
             return m_GhostPrefab != null;
+        }
+
+        void ConfigureGhostBehavior(GameObject ghost)
+        {
+            if (ghost == null)
+                return;
+
+            if (m_GhostCaseController == null)
+                m_GhostCaseController = GhostCaseController.Instance;
+
+            var behavior = ghost.GetComponent<GhostBehaviorController>();
+            if (behavior == null)
+                behavior = ghost.AddComponent<GhostBehaviorController>();
+
+            behavior.Configure(m_GhostCaseController != null ? m_GhostCaseController.CurrentProfile : null, m_ARCamera);
         }
 
         List<SpawnCandidate> BuildSpawnCandidates(RoomScanResult scanResult, SpawnDiagnostics diagnostics)

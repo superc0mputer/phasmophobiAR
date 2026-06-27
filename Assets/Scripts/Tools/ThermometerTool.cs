@@ -115,12 +115,13 @@ namespace PhasmophobiAR.Tools
                     continue;
 
                 var distance = Vector3.Distance(transform.position, ghost.position);
-                var influence = Mathf.Clamp01(1f - distance / Mathf.Max(0.01f, m_MaxGhostInfluenceDistance));
+                var influence = Mathf.Clamp01(1f - distance / Mathf.Max(0.01f, m_MaxGhostInfluenceDistance))
+                    * GhostBehaviorController.GetTemperatureInfluenceMultiplier(ghost);
                 if (influence > best)
                     best = influence;
             }
 
-            return best;
+            return Mathf.Clamp01(best);
         }
 
         void ApplyRuntimeHologramScale()

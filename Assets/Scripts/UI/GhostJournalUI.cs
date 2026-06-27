@@ -475,8 +475,12 @@ namespace PhasmophobiAR.UI
             {
                 builder.AppendLine(profile.displayName);
                 builder.AppendLine(profile.description);
+                if (!string.IsNullOrEmpty(profile.behaviorSummary))
+                    builder.AppendLine(profile.behaviorSummary);
                 builder.Append("Evidence: ");
                 builder.AppendLine(FormatEvidenceInline(profile.requiredEvidence));
+                builder.AppendLine($"Reveal difficulty: {FormatDifficulty(profile.revealDifficulty)}");
+                builder.AppendLine($"Capture difficulty: {FormatDifficulty(profile.captureDifficulty)}");
                 builder.AppendLine();
             }
 
@@ -648,6 +652,17 @@ namespace PhasmophobiAR.UI
                 default:
                     return evidenceType.ToString();
             }
+        }
+
+        static string FormatDifficulty(float difficulty)
+        {
+            difficulty = Mathf.Clamp01(difficulty);
+            if (difficulty < 0.4f)
+                return "Low";
+            if (difficulty < 0.7f)
+                return "Moderate";
+
+            return "High";
         }
     }
 }
