@@ -124,12 +124,34 @@ namespace PhasmophobiAR.Game
             m_HasCompletedRoomScan = false;
             m_LastRoomScanResult = null;
             m_LastRoundResult = null;
+            ResetRoundState();
+            SetPhase(GamePhase.Setup);
+        }
+
+        public void PlayAgain()
+        {
+            if (!m_HasCompletedRoomScan)
+            {
+                ResetRound();
+                BeginRoomScan();
+                return;
+            }
+
+            m_LastRoundResult = null;
+            ResetRoundState();
+            SetPhase(GamePhase.Investigation);
+            m_ScanCompleted.Invoke();
+            ScanCompleted?.Invoke();
+            ScanCompletedWithResult?.Invoke(m_LastRoomScanResult);
+        }
+
+        void ResetRoundState()
+        {
             EvidenceRegistry.Instance?.Clear();
             JournalEvidenceSelection.Instance?.Clear();
             IdentificationController.Instance?.ClearSelection();
             GhostCaseController.Instance?.BeginNewCase();
             GhostSpawnController.Instance?.ResetSpawnedGhosts();
-            SetPhase(GamePhase.Setup);
         }
 
         void SetPhase(GamePhase nextPhase)
