@@ -17,9 +17,6 @@ namespace PhasmophobiAR.Tools
         [SerializeField]
         EvidenceRegistry m_EvidenceRegistry;
 
-        [SerializeField]
-        Camera m_ARCamera;
-
         [Header("Response")]
         [SerializeField]
         float m_MaxResponseDistanceMeters = 4f;
@@ -36,30 +33,26 @@ namespace PhasmophobiAR.Tools
         [SerializeField]
         string[] m_DefaultResponses =
         {
-            "I am here.",
-            "Behind you.",
+            "I AM HERE",
+            "BEHIND YOU",
             "Leave.",
-            "Get out.",
-            "Cold...",
+            "GET OUT",
+            "COLD",
             "Run.",
-            "I see you.",
-            "Do not stay.",
+            "I SEE YOU",
+            "DO NOT STAY",
             "Close.",
-            "Help me.",
-            "Turn around.",
-            "Not alone.",
-            "Listen closer.",
-            "Your voice is mine.",
-            "In the dark.",
-            "Come closer."
+            "HELP ME",
+            "TURN AROUND",
+            "NOT ALONE",
+            "LISTEN",
+            "IN THE DARK",
+            "COME CLOSER"
         };
 
-        [Header("3D UI")]
+        [Header("Overlay UI")]
         [SerializeField]
         TMP_Text m_ResponseText;
-
-        [SerializeField]
-        Vector3 m_TextLocalPosition = new Vector3(0f, 0.22f, 0f);
 
         float m_NextResponseTime;
         int m_ResponseIndex;
@@ -79,11 +72,6 @@ namespace PhasmophobiAR.Tools
             if (m_EvidenceRegistry == null)
                 m_EvidenceRegistry = EvidenceRegistry.Instance;
 
-            if (m_ARCamera == null && Camera.main != null)
-                m_ARCamera = Camera.main;
-
-            EnsureDeviceVisual();
-            EnsureResponseText();
             EnsureCollider();
             SetResponse(m_IdleText);
         }
@@ -108,8 +96,6 @@ namespace PhasmophobiAR.Tools
 
         void Update()
         {
-            BillboardText();
-
             if (!CanListen())
             {
                 SetResponse(m_IdleText);
@@ -201,62 +187,6 @@ namespace PhasmophobiAR.Tools
             m_HasRecordedSpiritResponse = false;
         }
 
-        void EnsureDeviceVisual()
-        {
-            if (transform.Find("Spirit Response Body") != null)
-                return;
-
-            CreateDeviceVisual(transform);
-        }
-
-        static void CreateDeviceVisual(Transform parent)
-        {
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "Spirit Response Body";
-            body.transform.SetParent(parent, false);
-            body.transform.localPosition = new Vector3(0f, 0.035f, 0f);
-            body.transform.localScale = new Vector3(0.095f, 0.018f, 0.115f);
-            DestroyPrimitiveCollider(body);
-            SetColor(body, new Color(0.06f, 0.05f, 0.09f));
-
-            var speaker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            speaker.name = "Spirit Response Speaker";
-            speaker.transform.SetParent(parent, false);
-            speaker.transform.localPosition = new Vector3(0f, 0.052f, 0.022f);
-            speaker.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            speaker.transform.localScale = new Vector3(0.026f, 0.006f, 0.026f);
-            DestroyPrimitiveCollider(speaker);
-            SetColor(speaker, new Color(0.22f, 0.18f, 0.32f));
-
-            var display = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            display.name = "Spirit Response Display";
-            display.transform.SetParent(parent, false);
-            display.transform.localPosition = new Vector3(0f, 0.053f, -0.025f);
-            display.transform.localScale = new Vector3(0.06f, 0.006f, 0.028f);
-            DestroyPrimitiveCollider(display);
-            SetColor(display, new Color(0.55f, 0.9f, 1f));
-        }
-
-        void EnsureResponseText()
-        {
-            if (m_ResponseText != null)
-                return;
-
-            var textObject = new GameObject("Spirit Response Text");
-            textObject.transform.SetParent(transform, false);
-            textObject.transform.localPosition = m_TextLocalPosition;
-            textObject.transform.localRotation = Quaternion.identity;
-            textObject.transform.localScale = Vector3.one * 0.01f;
-
-            var text = textObject.AddComponent<TextMeshPro>();
-            text.alignment = TextAlignmentOptions.Center;
-            text.fontSize = 3.2f;
-            text.enableWordWrapping = true;
-            text.rectTransform.sizeDelta = new Vector2(26f, 8f);
-            text.color = new Color(0.72f, 0.96f, 1f, 1f);
-            m_ResponseText = text;
-        }
-
         void EnsureCollider()
         {
             if (GetComponent<Collider>() != null)
@@ -267,45 +197,11 @@ namespace PhasmophobiAR.Tools
             box.size = new Vector3(0.12f, 0.08f, 0.14f);
         }
 
-        void BillboardText()
-        {
-            if (m_ResponseText == null)
-                return;
-
-            if (m_ARCamera == null && Camera.main != null)
-                m_ARCamera = Camera.main;
-
-            if (m_ARCamera == null)
-                return;
-
-            var toCamera = m_ARCamera.transform.position - m_ResponseText.transform.position;
-            if (toCamera.sqrMagnitude < 0.001f)
-                return;
-
-            m_ResponseText.transform.rotation = Quaternion.LookRotation(toCamera.normalized, Vector3.up);
-        }
-
         void SetResponse(string response)
         {
             m_CurrentResponse = response;
             if (m_ResponseText != null)
                 m_ResponseText.text = response;
-        }
-
-        static void DestroyPrimitiveCollider(GameObject primitive)
-        {
-            var collider = primitive.GetComponent<Collider>();
-            if (collider != null)
-                Destroy(collider);
-        }
-
-        static void SetColor(GameObject gameObject, Color color)
-        {
-            var renderer = gameObject.GetComponent<Renderer>();
-            if (renderer == null)
-                return;
-
-            renderer.material.color = color;
         }
     }
 }
