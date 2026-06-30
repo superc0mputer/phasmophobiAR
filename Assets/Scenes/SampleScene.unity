@@ -6731,7 +6731,7 @@ MonoBehaviour:
     m_DisplayName: Spirit Response
     m_TextureResourcePath: Markers/tool_spirit_response_marker
     m_ToolType: 2
-    m_ToolPrefab: {fileID: 0}
+    m_ToolPrefab: {fileID: 100000, guid: d5cfd4ebea1c45fd8e7d8e0af3103770, type: 3}
     m_PhysicalWidthMeters: 0.12
   m_StatusText: {fileID: 1143187977}
 --- !u!114 &1357280003
@@ -6764,7 +6764,7 @@ MonoBehaviour:
     m_DisplayName: Spirit Response
     m_TextureResourcePath: Markers/tool_spirit_response_marker
     m_ToolType: 2
-    m_ToolPrefab: {fileID: 0}
+    m_ToolPrefab: {fileID: 100000, guid: d5cfd4ebea1c45fd8e7d8e0af3103770, type: 3}
     m_PhysicalWidthMeters: 0.12
 --- !u!114 &1357280004
 MonoBehaviour:

@@ -28,10 +28,10 @@ namespace PhasmophobiAR.Tools
         float m_ResponseIntervalSeconds = 2.6f;
 
         [SerializeField]
-        string m_IdleText = "SPIRIT BOX";
+        string m_IdleText = "*static*";
 
         [SerializeField]
-        string m_ListeningText = "LISTENING...";
+        string m_ListeningText = "*static*";
 
         [SerializeField]
         string[] m_DefaultResponses =
@@ -82,6 +82,7 @@ namespace PhasmophobiAR.Tools
             if (m_ARCamera == null && Camera.main != null)
                 m_ARCamera = Camera.main;
 
+            EnsureDeviceVisual();
             EnsureResponseText();
             EnsureCollider();
             SetResponse(m_IdleText);
@@ -200,6 +201,42 @@ namespace PhasmophobiAR.Tools
             m_HasRecordedSpiritResponse = false;
         }
 
+        void EnsureDeviceVisual()
+        {
+            if (transform.Find("Spirit Response Body") != null)
+                return;
+
+            CreateDeviceVisual(transform);
+        }
+
+        static void CreateDeviceVisual(Transform parent)
+        {
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "Spirit Response Body";
+            body.transform.SetParent(parent, false);
+            body.transform.localPosition = new Vector3(0f, 0.035f, 0f);
+            body.transform.localScale = new Vector3(0.095f, 0.018f, 0.115f);
+            DestroyPrimitiveCollider(body);
+            SetColor(body, new Color(0.06f, 0.05f, 0.09f));
+
+            var speaker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            speaker.name = "Spirit Response Speaker";
+            speaker.transform.SetParent(parent, false);
+            speaker.transform.localPosition = new Vector3(0f, 0.052f, 0.022f);
+            speaker.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            speaker.transform.localScale = new Vector3(0.026f, 0.006f, 0.026f);
+            DestroyPrimitiveCollider(speaker);
+            SetColor(speaker, new Color(0.22f, 0.18f, 0.32f));
+
+            var display = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            display.name = "Spirit Response Display";
+            display.transform.SetParent(parent, false);
+            display.transform.localPosition = new Vector3(0f, 0.053f, -0.025f);
+            display.transform.localScale = new Vector3(0.06f, 0.006f, 0.028f);
+            DestroyPrimitiveCollider(display);
+            SetColor(display, new Color(0.55f, 0.9f, 1f));
+        }
+
         void EnsureResponseText()
         {
             if (m_ResponseText != null)
@@ -241,7 +278,7 @@ namespace PhasmophobiAR.Tools
             if (m_ARCamera == null)
                 return;
 
-            var toCamera = m_ResponseText.transform.position - m_ARCamera.transform.position;
+            var toCamera = m_ARCamera.transform.position - m_ResponseText.transform.position;
             if (toCamera.sqrMagnitude < 0.001f)
                 return;
 
@@ -253,6 +290,22 @@ namespace PhasmophobiAR.Tools
             m_CurrentResponse = response;
             if (m_ResponseText != null)
                 m_ResponseText.text = response;
+        }
+
+        static void DestroyPrimitiveCollider(GameObject primitive)
+        {
+            var collider = primitive.GetComponent<Collider>();
+            if (collider != null)
+                Destroy(collider);
+        }
+
+        static void SetColor(GameObject gameObject, Color color)
+        {
+            var renderer = gameObject.GetComponent<Renderer>();
+            if (renderer == null)
+                return;
+
+            renderer.material.color = color;
         }
     }
 }
