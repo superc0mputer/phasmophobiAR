@@ -114,6 +114,7 @@ namespace PhasmophobiAR.Markers
             {
                 var markerName = removed.Value != null ? removed.Value.referenceImage.name : removed.Key.ToString();
                 Debug.Log($"Tool marker '{markerName}' removed by AR tracking.");
+                RemoveTool(markerName);
             }
         }
 
@@ -141,7 +142,7 @@ namespace PhasmophobiAR.Markers
 
             if (trackedImage.trackingState != TrackingState.Tracking)
             {
-                Debug.Log($"Tool marker '{markerName}' is not currently tracking. Keeping existing tool stable.");
+                Debug.Log($"Tool marker '{markerName}' is not currently tracking. Waiting for full tracking before attaching the tool.");
                 SetStatus($"Hold the {definition.DisplayName} card steady.");
                 return;
             }
@@ -151,13 +152,13 @@ namespace PhasmophobiAR.Markers
                 tool = SpawnTool(definition, trackedImage.transform);
                 m_SpawnedToolsByMarkerName[markerName] = tool;
                 Debug.Log($"Spawned {definition.DisplayName} for marker '{markerName}'.");
-                SetStatus($"{definition.DisplayName} placed.");
+                SetStatus($"{definition.DisplayName} tracking.");
             }
             else
             {
-                ApplyPose(tool.transform, trackedImage.transform);
-                Debug.Log($"Updated {definition.DisplayName} pose from re-detected marker '{markerName}'.");
-                SetStatus($"{definition.DisplayName} position refreshed.");
+                AttachToMarker(tool.transform, trackedImage.transform);
+                Debug.Log($"Updated {definition.DisplayName} to follow marker '{markerName}'.");
+                SetStatus($"{definition.DisplayName} following card.");
             }
         }
 
@@ -170,13 +171,28 @@ namespace PhasmophobiAR.Markers
                 tool = CreateFallbackTool(definition);
 
             tool.name = $"{definition.DisplayName} Tool";
-            ApplyPose(tool.transform, markerTransform);
+            AttachToMarker(tool.transform, markerTransform);
             return tool;
         }
 
-        static void ApplyPose(Transform toolTransform, Transform markerTransform)
+        static void AttachToMarker(Transform toolTransform, Transform markerTransform)
         {
-            toolTransform.SetPositionAndRotation(markerTransform.position, markerTransform.rotation);
+            toolTransform.SetParent(markerTransform, false);
+            toolTransform.localPosition = Vector3.zero;
+            toolTransform.localRotation = Quaternion.identity;
+        }
+
+        void RemoveTool(string markerName)
+        {
+            if (string.IsNullOrEmpty(markerName))
+                return;
+
+            if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool))
+                return;
+
+            m_SpawnedToolsByMarkerName.Remove(markerName);
+            if (tool != null)
+                Destroy(tool);
         }
 
         static GameObject CreateFallbackTool(MarkerToolDefinition definition)
