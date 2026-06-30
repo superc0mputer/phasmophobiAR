@@ -8,6 +8,11 @@ namespace PhasmophobiAR.UI
 {
     public sealed class RoomScanUI : MonoBehaviour
     {
+        static readonly Color s_TrackingGoodColor = new Color(0.18f, 0.92f, 0.76f);
+        static readonly Color s_TrackingLimitedColor = new Color(1f, 0.72f, 0.25f);
+        static readonly Color s_TrackingPoorColor = new Color(1f, 0.32f, 0.28f);
+        static readonly Color s_TrackingUnavailableColor = new Color(0.64f, 0.72f, 0.72f);
+
         [SerializeField]
         GameStateManager m_GameStateManager;
 
@@ -74,6 +79,11 @@ namespace PhasmophobiAR.UI
         {
             if (m_GameStateManager == null)
                 m_GameStateManager = GameStateManager.Instance;
+
+            // This legacy label repeated the progress bar and instruction.
+            // Preserve its serialized reference, but keep it out of the scan HUD.
+            if (m_RoomSignalsText != null)
+                m_RoomSignalsText.gameObject.SetActive(false);
         }
 
         void OnEnable()
@@ -102,6 +112,9 @@ namespace PhasmophobiAR.UI
 
             if (m_StartInvestigationButton != null && phase == GamePhase.RoomScan)
                 m_StartInvestigationButton.gameObject.SetActive(false);
+
+            if (m_InstructionText != null && phase == GamePhase.RoomScan)
+                m_InstructionText.gameObject.SetActive(true);
         }
 
         void OnScanUpdated(RoomScanController.ScanSnapshot snapshot)
@@ -110,16 +123,23 @@ namespace PhasmophobiAR.UI
                 m_ProgressSlider.value = snapshot.progress;
 
             if (m_ProgressText != null)
-                m_ProgressText.text = $"SCAN {Mathf.RoundToInt(snapshot.progress * 100f)}%";
+                m_ProgressText.text = $"{Mathf.RoundToInt(snapshot.progress * 100f)}%";
 
             if (m_TrackingText != null)
-                m_TrackingText.text = $"Signal: {GetSignalLabel(snapshot.confidence)}";
+            {
+                m_TrackingText.text = snapshot.isReady
+                    ? "●  ROOM LOCKED"
+                    : GetTrackingLabel(snapshot.confidence);
+                m_TrackingText.color = snapshot.isReady
+                    ? s_TrackingGoodColor
+                    : GetTrackingColor(snapshot.confidence);
+            }
 
             if (m_InstructionText != null)
+            {
                 m_InstructionText.text = GetPlayerInstruction(snapshot);
-
-            if (m_RoomSignalsText != null)
-                m_RoomSignalsText.text = GetScanStatus(snapshot);
+                m_InstructionText.gameObject.SetActive(!snapshot.isReady);
+            }
 
             if (m_StartInvestigationButton != null)
             {
@@ -129,65 +149,51 @@ namespace PhasmophobiAR.UI
             }
         }
 
-        static string GetRoomDetailLabel(RoomScanController.ScanSnapshot snapshot)
-        {
-            if (snapshot.hasLiDARMeshData || snapshot.featurePointCount >= 120)
-                return "high";
-
-            if (snapshot.featurePointCount >= 45)
-                return "medium";
-
-            if (snapshot.featurePointCount > 0)
-                return "low";
-
-            return "none";
-        }
-
-        static string GetSignalLabel(TrackingConfidence confidence)
+        static string GetTrackingLabel(TrackingConfidence confidence)
         {
             switch (confidence)
             {
                 case TrackingConfidence.Good:
-                    return "stable";
+                    return "●  TRACKING";
                 case TrackingConfidence.Limited:
-                    return "flickering";
+                    return "●  LIMITED";
                 case TrackingConfidence.Poor:
-                    return "unstable";
+                    return "●  SIGNAL LOST";
                 default:
-                    return "searching";
+                    return "●  SEARCHING";
+            }
+        }
+
+        static Color GetTrackingColor(TrackingConfidence confidence)
+        {
+            switch (confidence)
+            {
+                case TrackingConfidence.Good:
+                    return s_TrackingGoodColor;
+                case TrackingConfidence.Limited:
+                    return s_TrackingLimitedColor;
+                case TrackingConfidence.Poor:
+                    return s_TrackingPoorColor;
+                default:
+                    return s_TrackingUnavailableColor;
             }
         }
 
         static string GetPlayerInstruction(RoomScanController.ScanSnapshot snapshot)
         {
             if (snapshot.isReady)
-                return "Room locked. Begin the hunt.";
+                return "Room mapped";
 
             if (snapshot.confidence == TrackingConfidence.Unavailable || snapshot.confidence == TrackingConfidence.Poor)
-                return "Move slowly across edges and corners.";
+                return "Move slowly — keep surfaces in view";
 
             if (snapshot.trackedPlaneCount == 0)
-                return "Find a surface.";
+                return "Aim at a wall or floor";
 
             if (!snapshot.hasEstimatedBounds)
-                return "Sweep the room.";
+                return "Sweep across the room";
 
-            return "Hold steady.";
-        }
-
-        static string GetScanStatus(RoomScanController.ScanSnapshot snapshot)
-        {
-            if (snapshot.isReady)
-                return "Ready";
-
-            var detail = GetRoomDetailLabel(snapshot);
-            if (detail == "none" || detail == "low")
-                return "Searching";
-
-            if (!snapshot.hasEstimatedBounds)
-                return "Mapping";
-
-            return "Scanning";
+            return "Keep moving slowly";
         }
 
         void Subscribe()
