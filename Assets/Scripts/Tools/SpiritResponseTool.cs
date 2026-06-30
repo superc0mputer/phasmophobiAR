@@ -24,6 +24,9 @@ namespace PhasmophobiAR.Tools
         [SerializeField]
         float m_ResponseIntervalSeconds = 2.6f;
 
+        [SerializeField, Range(0f, 1f)]
+        float m_ResponseChance = 0.35f;
+
         [SerializeField]
         string m_IdleText = "*static*";
 
@@ -120,6 +123,12 @@ namespace PhasmophobiAR.Tools
         void UpdateSpiritResponse()
         {
             if (!TryGetNearestGhostDistance(out var distance) || distance > m_MaxResponseDistanceMeters)
+            {
+                SetResponse(m_ListeningText);
+                return;
+            }
+
+            if (Random.value > m_ResponseChance)
             {
                 SetResponse(m_ListeningText);
                 return;
