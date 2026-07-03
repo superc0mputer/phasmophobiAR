@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7478264458490545037}
   - component: {fileID: 7653786789812339414}
   - component: {fileID: 1096143833721273602}
+  - component: {fileID: -1550357350723196786}
   m_Layer: 0
   m_Name: Ghost
   m_TagString: Untagged
@@ -114,3 +115,33 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &-1550357350723196786
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5775fba3480cf40a48e2cce5fd8e0202, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.GhostRevealCaptureController
+  m_GameStateManager: {fileID: 0}
+  m_RoomScanController: {fileID: 0}
+  m_ARCamera: {fileID: 0}
+  m_GhostBehavior: {fileID: 0}
+  m_CaptureProgressSlider: {fileID: 0}
+  m_CaptureProgressText: {fileID: 0}
+  m_Settings:
+    partialRevealDistanceMeters: 3
+    partialRevealAngleDegrees: 30
+    revealDistanceMeters: 1.6
+    revealAngleDegrees: 14
+    partialRevealHoldSeconds: 0.35
+    revealHoldSeconds: 1
+    captureSeconds: 3
+    captureProgressDecayPerSecond: 0.6
+    minimumTrackingConfidence: 2
+    captureProgressBonusAtCenter: 0.25
+  m_ResultDelaySeconds: 0.4

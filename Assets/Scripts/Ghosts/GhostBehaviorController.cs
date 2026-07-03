@@ -5,8 +5,6 @@ namespace PhasmophobiAR.Ghosts
 {
     public sealed class GhostBehaviorController : MonoBehaviour
     {
-        const float k_DefaultGazeAngleDegrees = 12f;
-
         [SerializeField]
         GhostType m_GhostType;
 
@@ -20,14 +18,15 @@ namespace PhasmophobiAR.Ghosts
         Vector3 m_AnchorLocalPosition;
         Vector3 m_InitialScale;
         float m_MoveSeed;
-        float m_GazeTime;
-        float m_HiddenUntilTime;
-        bool m_IsHidden;
+        GhostRevealState m_RevealState = GhostRevealState.Hidden;
+        float m_CaptureProgress;
 
         public GhostType GhostType => m_GhostType;
         public GhostProfile Profile => m_Profile;
-        public bool IsVisible => !m_IsHidden;
-        public bool IsRevealed => IsVisible;
+        public GhostRevealState RevealState => m_RevealState;
+        public bool IsVisible => m_RevealState != GhostRevealState.Hidden;
+        public bool IsRevealed => m_RevealState == GhostRevealState.Revealed || m_RevealState == GhostRevealState.Capturing || m_RevealState == GhostRevealState.Captured;
+        public float CaptureProgress => m_CaptureProgress;
         public float RevealDifficulty => m_Profile != null ? Mathf.Clamp01(m_Profile.revealDifficulty) : 0.5f;
         public float CaptureDifficulty => m_Profile != null ? Mathf.Clamp01(m_Profile.captureDifficulty) : 0.5f;
         public float EMFSignalMultiplier => GetPositiveMultiplier(m_Profile != null ? m_Profile.emfSignalMultiplier : 1f);
@@ -48,7 +47,7 @@ namespace PhasmophobiAR.Ghosts
             m_GhostType = profile != null ? profile.ghostType : default;
             m_ARCamera = arCamera != null ? arCamera : m_ARCamera;
             CacheRenderers();
-            SetHidden(false);
+            SetRevealState(GhostRevealState.Hidden, 0f);
         }
 
         void Update()
@@ -57,8 +56,7 @@ namespace PhasmophobiAR.Ghosts
                 return;
 
             UpdateMovement();
-            UpdateGazeHide();
-            UpdateStaticVisuals();
+            UpdateRevealVisuals();
         }
 
         void UpdateMovement()
@@ -77,57 +75,54 @@ namespace PhasmophobiAR.Ghosts
             transform.localPosition = m_AnchorLocalPosition + offset;
         }
 
-        void UpdateGazeHide()
+        void UpdateRevealVisuals()
         {
-            if (m_Profile.gazeHideThresholdSeconds <= 0f || m_ARCamera == null)
-                return;
-
-            if (m_IsHidden)
+            if (m_RevealState == GhostRevealState.Hidden)
             {
-                if (Time.time >= m_HiddenUntilTime)
-                    SetHidden(false);
+                SetRenderersEnabled(false);
                 return;
             }
 
-            m_GazeTime = IsCameraLookingAtGhost() ? m_GazeTime + Time.deltaTime : 0f;
-            if (m_GazeTime >= m_Profile.gazeHideThresholdSeconds)
-            {
-                m_GazeTime = 0f;
-                m_HiddenUntilTime = Time.time + Mathf.Max(0.1f, m_Profile.hiddenDurationSeconds);
-                SetHidden(true);
-            }
-        }
+            SetRenderersEnabled(true);
 
-        bool IsCameraLookingAtGhost()
-        {
-            var toGhost = transform.position - m_ARCamera.position;
-            if (toGhost.sqrMagnitude < 0.001f)
-                return false;
+            var pulse = m_Profile != null && m_Profile.ghostType == GhostType.StaticGhost
+                ? Mathf.PerlinNoise(Time.time * 18f, m_MoveSeed)
+                : 0f;
+            var color = GetStateColor(m_RevealState, m_CaptureProgress, pulse);
+            transform.localScale = GetRevealScale(pulse);
 
-            var angle = Vector3.Angle(m_ARCamera.forward, toGhost.normalized);
-            return angle <= k_DefaultGazeAngleDegrees;
-        }
-
-        void UpdateStaticVisuals()
-        {
-            if (m_Profile.ghostType != GhostType.StaticGhost || m_IsHidden)
-                return;
-
-            var pulse = Mathf.PerlinNoise(Time.time * 18f, m_MoveSeed);
-            var scaleJitter = Mathf.Lerp(0.96f, 1.08f, pulse);
-            transform.localScale = m_InitialScale * scaleJitter;
-
-            if (m_Renderers == null)
-                return;
-
-            var color = Color.Lerp(new Color(0.45f, 0.85f, 1f, 0.7f), Color.white, pulse);
             foreach (var renderer in m_Renderers)
                 ApplyRendererColor(renderer, color);
         }
 
-        void SetHidden(bool hidden)
+        Vector3 GetRevealScale(float pulse)
         {
-            m_IsHidden = hidden;
+            if (m_Profile == null)
+                return m_InitialScale;
+
+            if (m_Profile.ghostType != GhostType.StaticGhost || m_RevealState == GhostRevealState.Hidden)
+                return m_InitialScale;
+
+            var scaleJitter = Mathf.Lerp(0.96f, 1.08f, pulse);
+            return m_InitialScale * scaleJitter;
+        }
+
+        public void SetRevealState(GhostRevealState state, float captureProgress = 0f)
+        {
+            m_RevealState = state;
+            m_CaptureProgress = Mathf.Clamp01(captureProgress);
+            CacheRenderers();
+            UpdateRevealVisuals();
+        }
+
+        void CacheRenderers()
+        {
+            if (m_Renderers == null || m_Renderers.Length == 0)
+                m_Renderers = GetComponentsInChildren<Renderer>(true);
+        }
+
+        void SetRenderersEnabled(bool enabled)
+        {
             CacheRenderers();
 
             if (m_Renderers == null)
@@ -136,14 +131,25 @@ namespace PhasmophobiAR.Ghosts
             foreach (var renderer in m_Renderers)
             {
                 if (renderer != null)
-                    renderer.enabled = !hidden;
+                    renderer.enabled = enabled;
             }
         }
 
-        void CacheRenderers()
+        static Color GetStateColor(GhostRevealState state, float captureProgress, float pulse)
         {
-            if (m_Renderers == null || m_Renderers.Length == 0)
-                m_Renderers = GetComponentsInChildren<Renderer>(true);
+            switch (state)
+            {
+                case GhostRevealState.PartialReveal:
+                    return Color.Lerp(new Color(0.35f, 0.75f, 1f, 0.2f), new Color(0.6f, 0.9f, 1f, 0.45f), pulse);
+                case GhostRevealState.Revealed:
+                    return Color.Lerp(new Color(0.8f, 0.95f, 1f, 0.75f), Color.white, pulse * 0.35f);
+                case GhostRevealState.Capturing:
+                    return Color.Lerp(new Color(1f, 0.78f, 0.25f, 0.85f), new Color(1f, 0.95f, 0.7f, 1f), Mathf.Clamp01(captureProgress + pulse * 0.15f));
+                case GhostRevealState.Captured:
+                    return new Color(1f, 0.9f, 0.55f, 1f);
+                default:
+                    return Color.clear;
+            }
         }
 
         static void ApplyRendererColor(Renderer renderer, Color color)

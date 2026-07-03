@@ -340,6 +340,16 @@ namespace PhasmophobiAR.Ghosts
                 behavior = ghost.AddComponent<GhostBehaviorController>();
 
             behavior.Configure(m_GhostCaseController != null ? m_GhostCaseController.CurrentProfile : null, m_ARCamera);
+
+            var revealCapture = ghost.GetComponent<GhostRevealCaptureController>();
+            if (revealCapture == null)
+                revealCapture = ghost.AddComponent<GhostRevealCaptureController>();
+
+            revealCapture.Configure(
+                m_GameStateManager,
+                UnityEngine.Object.FindFirstObjectByType<RoomScanController>(),
+                m_ARCamera,
+                behavior);
         }
 
         List<SpawnCandidate> BuildSpawnCandidates(RoomScanResult scanResult, SpawnDiagnostics diagnostics)
