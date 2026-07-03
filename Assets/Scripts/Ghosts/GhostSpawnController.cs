@@ -350,6 +350,12 @@ namespace PhasmophobiAR.Ghosts
                 UnityEngine.Object.FindAnyObjectByType<RoomScanController>(),
                 m_ARCamera,
                 behavior);
+
+            var captureAudio = ghost.GetComponent<GhostCaptureAudioController>();
+            if (captureAudio == null)
+                captureAudio = ghost.AddComponent<GhostCaptureAudioController>();
+
+            captureAudio.Configure(revealCapture);
         }
 
         List<SpawnCandidate> BuildSpawnCandidates(RoomScanResult scanResult, SpawnDiagnostics diagnostics)

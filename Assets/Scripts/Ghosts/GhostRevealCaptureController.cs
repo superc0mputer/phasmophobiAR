@@ -1,4 +1,4 @@
-using System.Collections;
+using System;
 using PhasmophobiAR.Game;
 using PhasmophobiAR.Scanning;
 using UnityEngine;
@@ -29,10 +29,16 @@ namespace PhasmophobiAR.Ghosts
         bool m_IsSubscribed;
         bool m_HasTriggeredResult;
         bool m_IsResultDelayActive;
+        bool m_HasCaptureActivity;
+        bool m_HasReportedInterruption;
         float m_ResultDelayTimer;
+        float m_CaptureElapsedSeconds;
 
         public GhostRevealState CurrentState => m_StateMachine != null ? m_StateMachine.CurrentState : GhostRevealState.Hidden;
         public float CaptureProgress => m_StateMachine != null ? m_StateMachine.CaptureProgress : 0f;
+
+        public event Action CaptureSucceeded;
+        public event Action<string> CaptureInterrupted;
 
         void Awake()
         {
@@ -81,9 +87,20 @@ namespace PhasmophobiAR.Ghosts
             var angle = toGhost.sqrMagnitude > 0.0001f ? Vector3.Angle(m_ARCamera.forward, toGhost.normalized) : 0f;
 
             var previousState = m_StateMachine.CurrentState;
+            var previousProgress = m_StateMachine.CaptureProgress;
             var nextState = m_StateMachine.Tick(distance, angle, confidence, Time.deltaTime);
             ApplyStateChange(previousState, nextState);
             ApplyVisualState();
+
+            if (nextState == GhostRevealState.Capturing || nextState == GhostRevealState.Captured)
+            {
+                m_HasCaptureActivity = true;
+                m_CaptureElapsedSeconds += Time.deltaTime;
+                m_HasReportedInterruption = false;
+            }
+
+            if (m_HasCaptureActivity && !m_HasTriggeredResult && !m_HasReportedInterruption && previousProgress > 0f && CaptureProgress <= 0f)
+                HandleCaptureInterrupted();
 
             if (nextState == GhostRevealState.Captured)
                 HandleCaptureCompleted(Time.deltaTime);
@@ -109,6 +126,9 @@ namespace PhasmophobiAR.Ghosts
             m_HasTriggeredResult = false;
             m_IsResultDelayActive = false;
             m_ResultDelayTimer = 0f;
+            m_HasCaptureActivity = false;
+            m_HasReportedInterruption = false;
+            m_CaptureElapsedSeconds = 0f;
         }
 
         void ApplyStateChange(GhostRevealState previousState, GhostRevealState nextState)
@@ -144,9 +164,25 @@ namespace PhasmophobiAR.Ghosts
             if (m_ResultDelayTimer < m_ResultDelaySeconds)
                 return;
 
+            if (m_GameStateManager != null)
+                m_GameStateManager.RecordCaptureOutcome("Success", CaptureProgress, m_CaptureElapsedSeconds, string.Empty);
+
             m_HasTriggeredResult = true;
+            CaptureSucceeded?.Invoke();
             if (m_GameStateManager != null && m_GameStateManager.CurrentPhase == GamePhase.Investigation)
                 m_GameStateManager.ShowResult();
+        }
+
+        void HandleCaptureInterrupted()
+        {
+            m_HasReportedInterruption = true;
+            m_HasCaptureActivity = false;
+            m_CaptureElapsedSeconds = 0f;
+
+            if (m_GameStateManager != null)
+                m_GameStateManager.RecordCaptureOutcome("Interrupted", CaptureProgress, 0f, "Capture interrupted");
+
+            CaptureInterrupted?.Invoke("Capture interrupted");
         }
 
         void ResolveReferences()
@@ -190,6 +226,12 @@ namespace PhasmophobiAR.Ghosts
         {
             if (phase == GamePhase.Setup || phase == GamePhase.RoomScan)
                 BuildStateMachine();
+
+            if (phase == GamePhase.Result)
+            {
+                m_HasCaptureActivity = false;
+                m_HasReportedInterruption = false;
+            }
         }
     }
 }
