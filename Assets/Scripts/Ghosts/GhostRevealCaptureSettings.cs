@@ -17,8 +17,10 @@ namespace PhasmophobiAR.Ghosts
 
         [Header("Capture")]
         public float captureSeconds = 3f;
-        public float captureProgressDecayPerSecond = 0.6f;
         public TrackingConfidence minimumTrackingConfidence = TrackingConfidence.Limited;
+        public float captureZoneDistanceMeters = 1.8f;
+        public float captureZoneAngleDegrees = 12f;
+        public float captureProgressResetDelaySeconds = 0.75f;
         public float captureProgressBonusAtCenter = 0.25f;
 
         public GhostRevealCaptureSettings Copy()

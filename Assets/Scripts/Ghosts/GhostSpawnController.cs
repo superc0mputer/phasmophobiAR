@@ -347,7 +347,7 @@ namespace PhasmophobiAR.Ghosts
 
             revealCapture.Configure(
                 m_GameStateManager,
-                UnityEngine.Object.FindFirstObjectByType<RoomScanController>(),
+                UnityEngine.Object.FindAnyObjectByType<RoomScanController>(),
                 m_ARCamera,
                 behavior);
         }
@@ -673,11 +673,11 @@ namespace PhasmophobiAR.Ghosts
 
         static ARAnchorManager GetOrCreateAnchorManager()
         {
-            var anchorManager = UnityEngine.Object.FindFirstObjectByType<ARAnchorManager>();
+            var anchorManager = UnityEngine.Object.FindAnyObjectByType<ARAnchorManager>();
             if (anchorManager != null)
                 return anchorManager;
 
-            var xrOrigin = UnityEngine.Object.FindFirstObjectByType<XROrigin>();
+            var xrOrigin = UnityEngine.Object.FindAnyObjectByType<XROrigin>();
             if (xrOrigin == null)
                 return null;
 

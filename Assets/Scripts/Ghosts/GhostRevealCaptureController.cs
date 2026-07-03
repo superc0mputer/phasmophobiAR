@@ -1,9 +1,7 @@
 using System.Collections;
 using PhasmophobiAR.Game;
 using PhasmophobiAR.Scanning;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace PhasmophobiAR.Ghosts
 {
@@ -20,12 +18,6 @@ namespace PhasmophobiAR.Ghosts
 
         [SerializeField]
         GhostBehaviorController m_GhostBehavior;
-
-        [SerializeField]
-        Slider m_CaptureProgressSlider;
-
-        [SerializeField]
-        TMP_Text m_CaptureProgressText;
 
         [SerializeField]
         GhostRevealCaptureSettings m_Settings = new GhostRevealCaptureSettings();
@@ -63,16 +55,12 @@ namespace PhasmophobiAR.Ghosts
             GameStateManager gameStateManager,
             RoomScanController roomScanController,
             Transform arCamera,
-            GhostBehaviorController ghostBehavior,
-            Slider captureProgressSlider = null,
-            TMP_Text captureProgressText = null)
+            GhostBehaviorController ghostBehavior)
         {
             m_GameStateManager = gameStateManager ?? m_GameStateManager;
             m_RoomScanController = roomScanController ?? m_RoomScanController;
             m_ARCamera = arCamera ?? m_ARCamera;
             m_GhostBehavior = ghostBehavior ?? m_GhostBehavior;
-            m_CaptureProgressSlider = captureProgressSlider ?? m_CaptureProgressSlider;
-            m_CaptureProgressText = captureProgressText ?? m_CaptureProgressText;
 
             BuildStateMachine();
             ApplyVisualState();
@@ -84,10 +72,7 @@ namespace PhasmophobiAR.Ghosts
                 return;
 
             if (m_GameStateManager != null && m_GameStateManager.CurrentPhase != GamePhase.Investigation)
-            {
-                UpdateProgressUI();
                 return;
-            }
 
             var confidence = m_RoomScanController != null ? m_RoomScanController.Confidence : TrackingConfidence.Good;
             var ghostPosition = m_GhostBehavior.transform.position;
@@ -99,7 +84,6 @@ namespace PhasmophobiAR.Ghosts
             var nextState = m_StateMachine.Tick(distance, angle, confidence, Time.deltaTime);
             ApplyStateChange(previousState, nextState);
             ApplyVisualState();
-            UpdateProgressUI();
 
             if (nextState == GhostRevealState.Captured)
                 HandleCaptureCompleted(Time.deltaTime);
@@ -144,19 +128,6 @@ namespace PhasmophobiAR.Ghosts
             m_GhostBehavior.SetRevealState(m_StateMachine != null ? m_StateMachine.CurrentState : GhostRevealState.Hidden, CaptureProgress);
         }
 
-        void UpdateProgressUI()
-        {
-            var progress = CaptureProgress;
-
-            if (m_CaptureProgressSlider != null)
-                m_CaptureProgressSlider.value = progress;
-
-            if (m_CaptureProgressText != null)
-                m_CaptureProgressText.text = CurrentState == GhostRevealState.Capturing || CurrentState == GhostRevealState.Captured
-                    ? $"Capture: {Mathf.RoundToInt(progress * 100f)}%"
-                    : string.Empty;
-        }
-
         void HandleCaptureCompleted(float deltaTime)
         {
             if (m_HasTriggeredResult)
@@ -184,7 +155,7 @@ namespace PhasmophobiAR.Ghosts
                 m_GameStateManager = GameStateManager.Instance;
 
             if (m_RoomScanController == null)
-                m_RoomScanController = FindFirstObjectByType<RoomScanController>();
+                m_RoomScanController = FindAnyObjectByType<RoomScanController>();
 
             if (m_ARCamera == null && Camera.main != null)
                 m_ARCamera = Camera.main.transform;
@@ -219,8 +190,6 @@ namespace PhasmophobiAR.Ghosts
         {
             if (phase == GamePhase.Setup || phase == GamePhase.RoomScan)
                 BuildStateMachine();
-
-            UpdateProgressUI();
         }
     }
 }

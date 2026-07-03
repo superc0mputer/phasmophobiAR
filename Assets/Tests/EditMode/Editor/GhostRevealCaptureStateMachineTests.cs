@@ -45,7 +45,6 @@ namespace PhasmophobiAR.Tests.EditMode
                 revealAngleDegrees = 180f,
                 revealHoldSeconds = 0.05f,
                 captureSeconds = 0.2f,
-                captureProgressDecayPerSecond = 0f,
                 minimumTrackingConfidence = TrackingConfidence.Limited
             };
 
@@ -63,6 +62,73 @@ namespace PhasmophobiAR.Tests.EditMode
             machine.Tick(0.5f, 1f, TrackingConfidence.Good, 0.2f);
             Assert.AreEqual(GhostRevealState.Captured, machine.CurrentState);
             Assert.AreEqual(1f, machine.CaptureProgress, 0.001f);
+        }
+
+        [Test]
+        public void CaptureProgressPausesAndResetsWhenConditionsFail()
+        {
+            var settings = new GhostRevealCaptureSettings
+            {
+                partialRevealDistanceMeters = 10f,
+                partialRevealAngleDegrees = 180f,
+                partialRevealHoldSeconds = 0.01f,
+                revealDistanceMeters = 10f,
+                revealAngleDegrees = 180f,
+                revealHoldSeconds = 0.01f,
+                captureSeconds = 1f,
+                captureZoneDistanceMeters = 2f,
+                captureZoneAngleDegrees = 25f,
+                captureProgressResetDelaySeconds = 0.25f,
+                minimumTrackingConfidence = TrackingConfidence.Limited
+            };
+
+            var machine = new GhostRevealCaptureStateMachine(settings);
+            machine.Reset();
+
+            machine.Tick(0.5f, 1f, TrackingConfidence.Good, 0.05f);
+            machine.Tick(0.5f, 1f, TrackingConfidence.Good, 0.05f);
+            Assert.AreEqual(GhostRevealState.Revealed, machine.CurrentState);
+
+            machine.Tick(0.5f, 1f, TrackingConfidence.Good, 0.1f);
+            var capturedProgress = machine.CaptureProgress;
+            Assert.Greater(capturedProgress, 0f);
+            Assert.IsTrue(machine.IsGhostInsideCaptureZone);
+
+            machine.Tick(6f, 90f, TrackingConfidence.Good, 0.1f);
+            Assert.IsFalse(machine.IsGhostInsideCaptureZone);
+            Assert.AreEqual(capturedProgress, machine.CaptureProgress, 0.0001f);
+
+            machine.Tick(6f, 90f, TrackingConfidence.Good, 0.2f);
+            Assert.AreEqual(0f, machine.CaptureProgress, 0.0001f);
+        }
+
+        [Test]
+        public void UnstableTrackingBlocksCaptureProgress()
+        {
+            var settings = new GhostRevealCaptureSettings
+            {
+                partialRevealDistanceMeters = 10f,
+                partialRevealAngleDegrees = 180f,
+                partialRevealHoldSeconds = 0.01f,
+                revealDistanceMeters = 10f,
+                revealAngleDegrees = 180f,
+                revealHoldSeconds = 0.01f,
+                captureSeconds = 1f,
+                captureZoneDistanceMeters = 2f,
+                captureZoneAngleDegrees = 25f,
+                minimumTrackingConfidence = TrackingConfidence.Limited
+            };
+
+            var machine = new GhostRevealCaptureStateMachine(settings);
+            machine.Reset();
+
+            machine.Tick(0.5f, 1f, TrackingConfidence.Good, 0.05f);
+            machine.Tick(0.5f, 1f, TrackingConfidence.Good, 0.05f);
+            Assert.AreEqual(GhostRevealState.Revealed, machine.CurrentState);
+
+            machine.Tick(0.5f, 1f, TrackingConfidence.Poor, 0.25f);
+            Assert.AreEqual(0f, machine.CaptureProgress, 0.0001f);
+            Assert.AreNotEqual(GhostRevealState.Captured, machine.CurrentState);
         }
 
         [Test]
