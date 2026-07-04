@@ -3,6 +3,7 @@ namespace PhasmophobiAR.Markers
     public enum MarkerToolType
     {
         EMFReader,
-        Thermometer
+        Thermometer,
+        SpiritResponse
     }
 }

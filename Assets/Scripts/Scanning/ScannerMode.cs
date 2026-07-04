@@ -4,6 +4,7 @@ namespace PhasmophobiAR.Scanning
     {
         EMF,
         Thermal,
-        Spectral
+        Spectral,
+        SpiritResponse
     }
 }
