@@ -91,6 +91,9 @@ namespace PhasmophobiAR.UI
         TMP_Text m_ReferenceText;
 
         [SerializeField]
+        TMP_Text m_ReferenceTextRight;
+
+        [SerializeField]
         TMP_Text m_CasesText;
 
         [SerializeField]
@@ -493,9 +496,6 @@ namespace PhasmophobiAR.UI
             RefreshEvidenceButtons();
             RefreshGhostSelectionButtons(matchResult);
 
-            if (m_PossibleGhostsText != null)
-                m_PossibleGhostsText.text = FormatGhostEliminationList(matchResult);
-
             if (m_SelectedGhostText != null)
             {
                 if (m_IdentificationController != null && m_IdentificationController.HasSelection)
@@ -510,24 +510,33 @@ namespace PhasmophobiAR.UI
 
         void RefreshReferencePage()
         {
-            if (m_ReferenceText == null)
+            if (m_ReferenceText == null || m_ReferenceTextRight == null)
                 return;
 
-            var builder = new StringBuilder();
-            foreach (var profile in GhostProfileCatalog.GetMvpSelectableProfiles())
+            var leftPage = new StringBuilder();
+            var rightPage = new StringBuilder();
+            for (var i = 0; i < GhostProfileCatalog.Profiles.Count; i++)
             {
-                builder.AppendLine(profile.displayName);
-                builder.AppendLine(profile.description);
-                if (!string.IsNullOrEmpty(profile.behaviorSummary))
-                    builder.AppendLine(profile.behaviorSummary);
-                builder.Append("Evidence: ");
-                builder.AppendLine(FormatEvidenceInline(profile.requiredEvidence));
-                builder.AppendLine($"Reveal difficulty: {FormatDifficulty(profile.revealDifficulty)}");
-                builder.AppendLine($"Capture difficulty: {FormatDifficulty(profile.captureDifficulty)}");
-                builder.AppendLine();
+                var profile = GhostProfileCatalog.Profiles[i];
+                var page = i < 3 ? leftPage : rightPage;
+                AppendFieldGuideEntry(page, profile);
             }
 
-            m_ReferenceText.text = builder.ToString().TrimEnd();
+            m_ReferenceText.text = leftPage.ToString().TrimEnd();
+            m_ReferenceTextRight.text = rightPage.ToString().TrimEnd();
+        }
+
+        static void AppendFieldGuideEntry(StringBuilder builder, GhostProfile profile)
+        {
+            builder.Append("<b><color=#5CF2C2>");
+            builder.Append(profile.displayName.ToUpperInvariant());
+            builder.AppendLine("</color></b>");
+            builder.AppendLine(profile.description);
+            builder.AppendLine(profile.behaviorSummary);
+            builder.Append("<color=#9FB8AD>Evidence: ");
+            builder.Append(FormatEvidenceInline(profile.requiredEvidence));
+            builder.AppendLine("</color>");
+            builder.AppendLine();
         }
 
         void RefreshCasesPage()

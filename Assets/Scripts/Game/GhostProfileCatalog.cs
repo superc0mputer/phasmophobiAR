@@ -10,8 +10,8 @@ namespace PhasmophobiAR.Game
             new GhostProfile(
                 GhostType.Wanderer,
                 "Wanderer",
-                "A roaming presence that leaves clear EMF spikes and spectral traces.",
-                "Moves slowly around its anchor and is usually willing to reveal itself.",
+                "A restless presence that never settles in one spot. It circles its anchor in a broad, slow route, repeatedly crossing the same part of the room before drifting away again.",
+                "Follow it instead of waiting beside one tool. Its steady movement produces changing EMF strength and spectral traces along its route, and it is generally willing to remain visible once found.",
                 0.18f,
                 0.65f,
                 0f,
@@ -26,8 +26,8 @@ namespace PhasmophobiAR.Game
             new GhostProfile(
                 GhostType.ShyGhost,
                 "Shy Ghost",
-                "A quiet haunting that chills the room and answers through the spirit box.",
-                "Moves very little and hides when watched for too long.",
+                "A cautious ghost that stays close to its hiding place. It makes only small, infrequent movements and prefers to reveal itself through cold air and distant replies rather than direct appearances.",
+                "Do not stare continuously when it begins to manifest. Prolonged attention makes it retreat for several seconds; indirect observation and carefully placed tools give the best chance of locating it.",
                 0.05f,
                 0.2f,
                 1.35f,
@@ -42,8 +42,8 @@ namespace PhasmophobiAR.Game
             new GhostProfile(
                 GhostType.StaticGhost,
                 "Static Ghost",
-                "A broken signal that appears through EMF surges and visual spectral noise.",
-                "Barely moves, but jitters with visible static and stronger scanner distortion.",
+                "An almost motionless apparition bound tightly to one location. Instead of roaming, its outline jitters and pulses as though the image itself cannot hold a stable shape.",
+                "Its fixed position makes it easier to locate, but severe static and spectral distortion obscure the capture window. Search for repeated EMF peaks coming from the same point in the room.",
                 0.02f,
                 0.08f,
                 0f,
@@ -58,8 +58,8 @@ namespace PhasmophobiAR.Game
             new GhostProfile(
                 GhostType.Mimic,
                 "Mimic",
-                "A deceptive presence that answers back and leaves traces resembling other ghosts.",
-                "Uses neutral MVP behavior while its deceptive profile remains data-driven.",
+                "A deceptive presence that moves in a modest area and deliberately resembles other hauntings. Its activity can suggest several ghost types before settling into a consistent pattern.",
+                "Never trust a single strong reading. Compare spirit responses with repeated spectral traces from different positions; the Mimic is identified by contradictions between tools, not by one dramatic event.",
                 0.1f,
                 0.35f,
                 0f,
@@ -74,8 +74,8 @@ namespace PhasmophobiAR.Game
             new GhostProfile(
                 GhostType.FastGhost,
                 "Fast Ghost",
-                "A volatile entity that produces sharp EMF activity and sudden cold spots.",
-                "Uses neutral MVP behavior with higher future movement and capture tuning.",
+                "The quickest and widest-ranging ghost in the field guide. It sweeps rapidly between positions around its anchor, producing brief appearances and sudden changes in distance.",
+                "Keep moving and watch for sharp EMF jumps followed by isolated cold spots. Its reveal window is short and its capture is less forgiving, so center it immediately when it crosses the camera.",
                 0.25f,
                 0.8f,
                 0f,
@@ -93,7 +93,9 @@ namespace PhasmophobiAR.Game
         {
             GhostType.Wanderer,
             GhostType.ShyGhost,
-            GhostType.StaticGhost
+            GhostType.StaticGhost,
+            GhostType.Mimic,
+            GhostType.FastGhost
         };
 
         public static IReadOnlyList<GhostProfile> Profiles => s_Profiles;
