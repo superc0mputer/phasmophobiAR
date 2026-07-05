@@ -320,6 +320,12 @@ namespace PhasmophobiAR.Ghosts
             if (m_GhostCaseController == null)
                 m_GhostCaseController = GhostCaseController.Instance;
 
+            // Appearance is deliberately selected without consulting CurrentProfile/GhostType.
+            var visualRandomizer = ghost.GetComponent<GhostVisualRandomizer>();
+            if (visualRandomizer == null)
+                visualRandomizer = ghost.AddComponent<GhostVisualRandomizer>();
+            visualRandomizer.Randomize();
+
             var behavior = ghost.GetComponent<GhostBehaviorController>();
             if (behavior == null)
             {
