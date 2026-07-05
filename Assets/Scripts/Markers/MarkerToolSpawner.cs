@@ -23,6 +23,11 @@ namespace PhasmophobiAR.Markers
         [SerializeField]
         TMP_Text m_StatusText;
 
+        [Header("Scene-authored tools (never instantiated at runtime)")]
+        [SerializeField] GameObject m_EMFTool;
+        [SerializeField] GameObject m_ThermometerTool;
+        [SerializeField] GameObject m_SpiritResponseTool;
+
         readonly Dictionary<string, MarkerToolDefinition> m_DefinitionsByMarkerName = new Dictionary<string, MarkerToolDefinition>();
         readonly Dictionary<Guid, MarkerToolDefinition> m_DefinitionsByTextureGuid = new Dictionary<Guid, MarkerToolDefinition>();
         readonly Dictionary<string, GameObject> m_SpawnedToolsByMarkerName = new Dictionary<string, GameObject>();
@@ -46,6 +51,9 @@ namespace PhasmophobiAR.Markers
             m_ToolDefinitions = HasDefinitions(toolDefinitions) ? toolDefinitions : MarkerToolDefaults.CreateDefinitions();
             m_StatusText = statusText ?? m_StatusText;
             RebuildDefinitionLookup();
+            RegisterSceneTool(MarkerToolType.EMFReader, m_EMFTool);
+            RegisterSceneTool(MarkerToolType.Thermometer, m_ThermometerTool);
+            RegisterSceneTool(MarkerToolType.SpiritResponse, m_SpiritResponseTool);
         }
 
         void Awake()
@@ -149,30 +157,48 @@ namespace PhasmophobiAR.Markers
 
             if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool) || tool == null)
             {
-                tool = SpawnTool(definition, trackedImage.transform);
+                tool = GetSceneTool(definition.ToolType);
+                if (tool == null)
+                {
+                    Debug.LogError($"No scene-authored {definition.DisplayName} is assigned. Runtime tool creation is disabled.", this);
+                    SetStatus($"{definition.DisplayName} is missing from the scene.");
+                    return;
+                }
+
                 m_SpawnedToolsByMarkerName[markerName] = tool;
-                Debug.Log($"Spawned {definition.DisplayName} for marker '{markerName}'.");
+                AttachToMarker(tool.transform, trackedImage.transform);
+                tool.SetActive(true);
+                Debug.Log($"Activated scene {definition.DisplayName} for marker '{markerName}'.");
                 SetStatus($"{definition.DisplayName} tracking.");
             }
             else
             {
                 AttachToMarker(tool.transform, trackedImage.transform);
+                tool.SetActive(true);
                 Debug.Log($"Updated {definition.DisplayName} to follow marker '{markerName}'.");
                 SetStatus($"{definition.DisplayName} following card.");
             }
         }
 
-        GameObject SpawnTool(MarkerToolDefinition definition, Transform markerTransform)
+        void RegisterSceneTool(MarkerToolType type, GameObject tool)
         {
-            GameObject tool;
-            if (definition.ToolPrefab != null)
-                tool = Instantiate(definition.ToolPrefab);
-            else
-                tool = CreateFallbackTool(definition);
+            if (tool == null)
+                return;
 
-            tool.name = $"{definition.DisplayName} Tool";
-            AttachToMarker(tool.transform, markerTransform);
-            return tool;
+            tool.SetActive(false);
+            foreach (var definition in m_ToolDefinitions)
+                if (definition != null && definition.ToolType == type)
+                    m_SpawnedToolsByMarkerName[definition.MarkerName] = tool;
+        }
+
+        GameObject GetSceneTool(MarkerToolType type)
+        {
+            switch (type)
+            {
+                case MarkerToolType.Thermometer: return m_ThermometerTool;
+                case MarkerToolType.SpiritResponse: return m_SpiritResponseTool;
+                default: return m_EMFTool;
+            }
         }
 
         static void AttachToMarker(Transform toolTransform, Transform markerTransform)
@@ -190,97 +216,8 @@ namespace PhasmophobiAR.Markers
             if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool))
                 return;
 
-            m_SpawnedToolsByMarkerName.Remove(markerName);
             if (tool != null)
-                Destroy(tool);
-        }
-
-        static GameObject CreateFallbackTool(MarkerToolDefinition definition)
-        {
-            var root = new GameObject(definition.DisplayName);
-
-            switch (definition.ToolType)
-            {
-                case MarkerToolType.Thermometer:
-                    CreateThermometerVisual(root.transform);
-                    break;
-                case MarkerToolType.SpiritResponse:
-                    CreateSpiritResponseVisual(root.transform);
-                    root.AddComponent<SpiritResponseTool>();
-                    break;
-                default:
-                    CreateEMFVisual(root.transform);
-                    break;
-            }
-
-            return root;
-        }
-
-        static void CreateEMFVisual(Transform parent)
-        {
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "EMF Body";
-            body.transform.SetParent(parent, false);
-            body.transform.localPosition = new Vector3(0f, 0.035f, 0f);
-            body.transform.localScale = new Vector3(0.08f, 0.02f, 0.13f);
-            SetColor(body, new Color(0.08f, 0.08f, 0.09f));
-
-            var screen = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            screen.name = "EMF Screen";
-            screen.transform.SetParent(parent, false);
-            screen.transform.localPosition = new Vector3(0f, 0.051f, 0.02f);
-            screen.transform.localScale = new Vector3(0.055f, 0.006f, 0.045f);
-            SetColor(screen, new Color(0.15f, 0.9f, 0.45f));
-        }
-
-        static void CreateThermometerVisual(Transform parent)
-        {
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            body.name = "Thermometer Body";
-            body.transform.SetParent(parent, false);
-            body.transform.localPosition = new Vector3(0f, 0.055f, 0f);
-            body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            body.transform.localScale = new Vector3(0.018f, 0.08f, 0.018f);
-            SetColor(body, new Color(0.88f, 0.9f, 0.92f));
-
-            var display = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            display.name = "Thermometer Display";
-            display.transform.SetParent(parent, false);
-            display.transform.localPosition = new Vector3(0f, 0.08f, 0.03f);
-            display.transform.localScale = new Vector3(0.045f, 0.007f, 0.035f);
-            SetColor(display, new Color(0.2f, 0.7f, 1f));
-        }
-
-        static void CreateSpiritResponseVisual(Transform parent)
-        {
-            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            body.name = "Spirit Response Body";
-            body.transform.SetParent(parent, false);
-            body.transform.localPosition = new Vector3(0f, 0.035f, 0f);
-            body.transform.localScale = new Vector3(0.095f, 0.018f, 0.115f);
-            SetColor(body, new Color(0.06f, 0.05f, 0.09f));
-
-            var speaker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            speaker.name = "Spirit Response Speaker";
-            speaker.transform.SetParent(parent, false);
-            speaker.transform.localPosition = new Vector3(0f, 0.052f, 0.022f);
-            speaker.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            speaker.transform.localScale = new Vector3(0.026f, 0.006f, 0.026f);
-            SetColor(speaker, new Color(0.22f, 0.18f, 0.32f));
-
-            var display = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            display.name = "Spirit Response Display";
-            display.transform.SetParent(parent, false);
-            display.transform.localPosition = new Vector3(0f, 0.053f, -0.025f);
-            display.transform.localScale = new Vector3(0.06f, 0.006f, 0.028f);
-            SetColor(display, new Color(0.55f, 0.9f, 1f));
-        }
-
-        static void SetColor(GameObject gameObject, Color color)
-        {
-            var renderer = gameObject.GetComponent<Renderer>();
-            if (renderer != null)
-                renderer.material.color = color;
+                tool.SetActive(false);
         }
 
         void RebuildDefinitionLookup()

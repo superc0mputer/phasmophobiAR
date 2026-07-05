@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using PhasmophobiAR.Game;
 using PhasmophobiAR.Scanning;
-using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
 
@@ -47,6 +46,9 @@ namespace PhasmophobiAR.Ghosts
 
         [SerializeField]
         GameObject m_GhostPrefab;
+
+        [Header("Scene-authored ghosts (never instantiated at runtime)")]
+        [SerializeField] GameObject[] m_SceneGhosts;
 
         [SerializeField]
         Transform m_ARCamera;
@@ -158,8 +160,9 @@ namespace PhasmophobiAR.Ghosts
             if (m_ARCamera == null && Camera.main != null)
                 m_ARCamera = Camera.main.transform;
 
-            if (m_AnchorManager == null)
-                m_AnchorManager = GetOrCreateAnchorManager();
+            if (m_SceneGhosts != null)
+                foreach (var ghost in m_SceneGhosts)
+                    if (ghost != null) ghost.SetActive(false);
         }
 
         void OnDestroy()
@@ -236,7 +239,7 @@ namespace PhasmophobiAR.Ghosts
             SpawnGhostsOnce(m_GameStateManager != null ? m_GameStateManager.LastRoomScanResult : null);
         }
 
-        public async void SpawnGhostsOnce(RoomScanResult scanResult)
+        public void SpawnGhostsOnce(RoomScanResult scanResult)
         {
             if (m_HasSpawned)
                 return;
@@ -249,15 +252,12 @@ namespace PhasmophobiAR.Ghosts
                 m_GhostCaseController = GhostCaseController.Instance;
             m_GhostCaseController?.EnsureCase();
 
-            if (!ResolveGhostPrefab() || m_ARCamera == null)
+            if (m_SceneGhosts == null || m_SceneGhosts.Length == 0 || m_ARCamera == null)
             {
-                s_LastSpawnDiagnostics = "Ghost spawn failed: missing ghost prefab or AR camera.";
-                Debug.Log("Room scan completed. Ghost spawn hook fired; assign a ghost prefab to spawn a visible ghost. Place a prefab at Resources/Ghost.prefab or assign one to GhostSpawnController.");
+                s_LastSpawnDiagnostics = "Ghost activation failed: missing scene ghost or AR camera.";
+                Debug.LogError("Assign one or more scene-authored ghosts to GhostSpawnController. Runtime creation is disabled.", this);
                 return;
             }
-
-            if (m_AnchorManager == null)
-                m_AnchorManager = GetOrCreateAnchorManager();
 
             var diagnostics = new SpawnDiagnostics();
             var spawnCandidates = BuildSpawnCandidates(scanResult, diagnostics);
@@ -276,35 +276,29 @@ namespace PhasmophobiAR.Ghosts
                     continue;
                 }
 
-                var parent = await CreateAnchorParentAsync(candidate.pose);
-                if (!CanCompleteSpawn())
-                {
-                    DestroyAnchorParent(parent);
-                    diagnostics.Reject(candidate, "Spawn cancelled because phase changed before anchor creation completed.");
-                    s_LastSpawnDiagnostics = diagnostics.BuildSummary(s_SpawnedGhosts);
-                    return;
-                }
+                if (spawnedCount >= m_SceneGhosts.Length || m_SceneGhosts[spawnedCount] == null)
+                    break;
 
-                var ghost = Instantiate(m_GhostPrefab, parent);
-                ghost.transform.localPosition = Vector3.zero;
-                ghost.transform.localRotation = Quaternion.identity;
+                var ghost = m_SceneGhosts[spawnedCount];
+                ghost.transform.SetParent(null, true);
+                ghost.transform.SetPositionAndRotation(candidate.pose.position, candidate.pose.rotation);
                 ConfigureGhostBehavior(ghost);
+                ghost.SetActive(true);
 
                 var info = new GhostSpawnInfo
                 {
                     ghostTransform = ghost.transform,
-                    anchorTransform = parent,
+                    anchorTransform = null,
                     worldPose = candidate.pose,
-                    anchor = parent != null ? parent.GetComponent<ARAnchor>() : null,
+                    anchor = null,
                     source = candidate.source,
                     reason = candidate.reason,
                     score = candidate.score,
-                    hasARAnchor = parent != null && parent.GetComponent<ARAnchor>() != null
+                    hasARAnchor = false
                 };
 
                 s_SpawnedGhosts.Add(info);
                 diagnostics.Spawn(info);
-                CreateDebugAnchorView(info);
                 spawnedCount++;
             }
 
@@ -318,15 +312,6 @@ namespace PhasmophobiAR.Ghosts
             ClearSpawnedGhosts();
         }
 
-        bool ResolveGhostPrefab()
-        {
-            if (m_GhostPrefab != null)
-                return true;
-
-            m_GhostPrefab = Resources.Load<GameObject>("Ghost");
-            return m_GhostPrefab != null;
-        }
-
         void ConfigureGhostBehavior(GameObject ghost)
         {
             if (ghost == null)
@@ -337,13 +322,19 @@ namespace PhasmophobiAR.Ghosts
 
             var behavior = ghost.GetComponent<GhostBehaviorController>();
             if (behavior == null)
-                behavior = ghost.AddComponent<GhostBehaviorController>();
+            {
+                Debug.LogError("Scene ghost requires GhostBehaviorController.", ghost);
+                return;
+            }
 
             behavior.Configure(m_GhostCaseController != null ? m_GhostCaseController.CurrentProfile : null, m_ARCamera);
 
             var revealCapture = ghost.GetComponent<GhostRevealCaptureController>();
             if (revealCapture == null)
-                revealCapture = ghost.AddComponent<GhostRevealCaptureController>();
+            {
+                Debug.LogError("Scene ghost requires GhostRevealCaptureController.", ghost);
+                return;
+            }
 
             revealCapture.Configure(
                 m_GameStateManager,
@@ -352,10 +343,8 @@ namespace PhasmophobiAR.Ghosts
                 behavior);
 
             var captureAudio = ghost.GetComponent<GhostCaptureAudioController>();
-            if (captureAudio == null)
-                captureAudio = ghost.AddComponent<GhostCaptureAudioController>();
-
-            captureAudio.Configure(revealCapture);
+            if (captureAudio != null)
+                captureAudio.Configure(revealCapture);
         }
 
         List<SpawnCandidate> BuildSpawnCandidates(RoomScanResult scanResult, SpawnDiagnostics diagnostics)
@@ -610,88 +599,6 @@ namespace PhasmophobiAR.Ghosts
             return forward.normalized;
         }
 
-        async Awaitable<Transform> CreateAnchorParentAsync(Pose pose)
-        {
-            if (m_AnchorManager != null)
-            {
-                try
-                {
-                    if (!m_AnchorManager.enabled)
-                        m_AnchorManager.enabled = true;
-
-                    var result = await m_AnchorManager.TryAddAnchorAsync(pose);
-                    if (result.status.IsSuccess() && result.value != null)
-                        return result.value.transform;
-
-                    Debug.LogWarning($"AR anchor creation failed for ghost spawn: {result.status}. Falling back to world-space parent.");
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"AR anchor creation threw for ghost spawn: {ex.Message}. Falling back to world-space parent.");
-                }
-            }
-
-            return CreateWorldSpaceAnchorParent(pose);
-        }
-
-        Transform CreateWorldSpaceAnchorParent(Pose pose)
-        {
-            var anchorObject = new GameObject("Ghost World Anchor");
-            anchorObject.transform.SetPositionAndRotation(pose.position, pose.rotation);
-            return anchorObject.transform;
-        }
-
-        void CreateDebugAnchorView(GhostSpawnInfo info)
-        {
-            if (!m_ShowDebugAnchors || info == null)
-                return;
-
-            GameObject debugObject;
-            if (m_DebugAnchorPrefab != null)
-            {
-                debugObject = Instantiate(m_DebugAnchorPrefab, info.WorldPosition, info.WorldRotation);
-            }
-            else
-            {
-                debugObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                debugObject.name = "Ghost Anchor Debug";
-                debugObject.transform.localScale = Vector3.one * 0.08f;
-                debugObject.transform.SetPositionAndRotation(info.WorldPosition, info.WorldRotation);
-
-                var collider = debugObject.GetComponent<Collider>();
-                if (collider != null)
-                    collider.enabled = false;
-
-                var renderer = debugObject.GetComponent<Renderer>();
-                if (renderer != null)
-                {
-                    renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                    renderer.material.SetColor("_BaseColor", new Color(0.3f, 0.95f, 1f, 0.9f));
-                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    renderer.receiveShadows = false;
-                }
-            }
-
-            var anchorTransform = info.anchor != null ? info.anchor.transform : info.ghostTransform.parent;
-            if (anchorTransform != null)
-                debugObject.transform.SetParent(anchorTransform, true);
-        }
-
-        static ARAnchorManager GetOrCreateAnchorManager()
-        {
-            var anchorManager = UnityEngine.Object.FindAnyObjectByType<ARAnchorManager>();
-            if (anchorManager != null)
-                return anchorManager;
-
-            var xrOrigin = UnityEngine.Object.FindAnyObjectByType<XROrigin>();
-            if (xrOrigin == null)
-                return null;
-
-            anchorManager = xrOrigin.gameObject.AddComponent<ARAnchorManager>();
-            Debug.Log($"Created ARAnchorManager on {xrOrigin.gameObject.name} for ghost anchoring.");
-            return anchorManager;
-        }
-
         public static void ClearSpawnedGhosts()
         {
             foreach (var info in s_SpawnedGhosts)
@@ -699,20 +606,8 @@ namespace PhasmophobiAR.Ghosts
                 if (info == null)
                     continue;
 
-                if (info.anchor != null)
-                {
-                    Destroy(info.anchor.gameObject);
-                    continue;
-                }
-
-                if (info.anchorTransform != null)
-                {
-                    Destroy(info.anchorTransform.gameObject);
-                    continue;
-                }
-
                 if (info.ghostTransform != null)
-                    Destroy(info.ghostTransform.gameObject);
+                    info.ghostTransform.gameObject.SetActive(false);
             }
 
             s_SpawnedGhosts.Clear();
@@ -730,12 +625,6 @@ namespace PhasmophobiAR.Ghosts
             return m_GameStateManager.HasCompletedRoomScan
                 && (m_GameStateManager.CurrentPhase == GamePhase.Investigation
                     || m_GameStateManager.CurrentPhase == GamePhase.RoomScan);
-        }
-
-        static void DestroyAnchorParent(Transform parent)
-        {
-            if (parent != null)
-                Destroy(parent.gameObject);
         }
 
         readonly struct SpawnCandidate

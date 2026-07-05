@@ -576,27 +576,8 @@ namespace PhasmophobiAR.UI
 
         void EnsureRestartButton()
         {
-            if (m_RestartButton != null || m_CloseButton == null || m_JournalRoot == null)
-                return;
-
-            var restartObject = Instantiate(m_CloseButton.gameObject, m_JournalRoot.transform);
-            restartObject.name = "Restart Journal Button";
-            m_RestartButton = restartObject.GetComponent<Button>();
-            if (m_RestartButton != null)
-                m_RestartButton.onClick.RemoveAllListeners();
-
-            var rectTransform = restartObject.GetComponent<RectTransform>();
-            if (rectTransform != null)
-            {
-                rectTransform.anchorMin = new Vector2(0f, 1f);
-                rectTransform.anchorMax = new Vector2(0f, 1f);
-                rectTransform.anchoredPosition = new Vector2(86f, -34f);
-                rectTransform.sizeDelta = new Vector2(84f, 24f);
-            }
-
-            var label = restartObject.GetComponentInChildren<TMP_Text>(true);
-            if (label != null)
-                label.text = "Restart";
+            if (m_RestartButton == null)
+                Debug.LogError("GhostJournalUI requires a scene-authored restart button. Runtime UI creation is disabled.", this);
         }
 
         void RefreshEvidenceButtons()

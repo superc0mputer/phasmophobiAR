@@ -208,7 +208,10 @@ namespace PhasmophobiAR.Tools
             {
                 m_AudioSource = GetComponent<AudioSource>();
                 if (m_AudioSource == null)
-                    m_AudioSource = gameObject.AddComponent<AudioSource>();
+                {
+                    Debug.LogError("ThermometerTool requires a pre-authored AudioSource.", this);
+                    return;
+                }
             }
 
             m_AudioSource.playOnAwake = false;
@@ -223,9 +226,7 @@ namespace PhasmophobiAR.Tools
             if (GetComponent<Collider>() != null)
                 return;
 
-            var box = gameObject.AddComponent<BoxCollider>();
-            box.center = new Vector3(0f, 0.04f, 0f);
-            box.size = new Vector3(0.08f, 0.06f, 0.18f);
+            Debug.LogError("ThermometerTool requires a pre-authored Collider.", this);
         }
 
         static Color TemperatureColor(float coldAmount)

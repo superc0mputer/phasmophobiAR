@@ -209,9 +209,7 @@ namespace PhasmophobiAR.Tools
             if (GetComponent<Collider>() != null)
                 return;
 
-            var box = gameObject.AddComponent<BoxCollider>();
-            box.center = new Vector3(0f, 0.04f, 0f);
-            box.size = new Vector3(0.12f, 0.08f, 0.14f);
+            Debug.LogError("SpiritResponseTool requires a pre-authored Collider.", this);
         }
 
         void SetResponse(string response)
