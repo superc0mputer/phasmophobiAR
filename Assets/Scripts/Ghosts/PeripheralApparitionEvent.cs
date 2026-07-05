@@ -12,7 +12,7 @@ namespace PhasmophobiAR.Ghosts
         [SerializeField] float m_MaximumVisibleSeconds = 1.6f;
         [SerializeField] float m_VisualScale = 0.28f;
         [SerializeField, Range(0f, 1f)] float m_Visibility = 0.45f;
-        [SerializeField] AudioClip m_PlaceholderSound;
+        [SerializeField] AudioClip[] m_DirectionalWhisperClips;
         [SerializeField, Range(0f, 1f)] float m_Volume = 0.35f;
 
         GameObject m_ActiveApparition;
@@ -41,7 +41,7 @@ namespace PhasmophobiAR.Ghosts
             m_ActiveApparition.transform.rotation = Quaternion.LookRotation(cameraTransform.position - position, Vector3.up);
             m_ActiveApparition.transform.localScale = Vector3.one * m_VisualScale;
             MakeSubtle(m_ActiveApparition);
-            PlayPlaceholderSound(cameraTransform);
+            PlayDirectionalWhisper(cameraTransform);
 
             var elapsed = 0f;
             while (elapsed < m_MaximumVisibleSeconds && IsInvestigationActive(director))
@@ -94,10 +94,17 @@ namespace PhasmophobiAR.Ghosts
             }
         }
 
-        void PlayPlaceholderSound(Transform cameraTransform)
+        void PlayDirectionalWhisper(Transform cameraTransform)
         {
-            if (m_PlaceholderSound == null) return;
-            AudioSource.PlayClipAtPoint(m_PlaceholderSound, cameraTransform.position, m_Volume);
+            if (m_DirectionalWhisperClips == null || m_DirectionalWhisperClips.Length == 0) return;
+            var start = Random.Range(0, m_DirectionalWhisperClips.Length);
+            for (var offset = 0; offset < m_DirectionalWhisperClips.Length; offset++)
+            {
+                var clip = m_DirectionalWhisperClips[(start + offset) % m_DirectionalWhisperClips.Length];
+                if (clip == null) continue;
+                AudioSource.PlayClipAtPoint(clip, cameraTransform.position, m_Volume);
+                return;
+            }
         }
 
         static bool IsInvestigationActive(HorrorDirector director)

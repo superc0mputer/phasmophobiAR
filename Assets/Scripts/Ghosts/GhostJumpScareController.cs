@@ -21,7 +21,7 @@ namespace PhasmophobiAR.Ghosts
         [SerializeField] float m_HoldDurationSeconds = 0.16f;
         [SerializeField] float m_DisappearDurationSeconds = 0.12f;
         [SerializeField] float m_VisualScale = 0.62f;
-        [SerializeField] AudioClip m_JumpScareClip;
+        [SerializeField] AudioClip[] m_JumpScareClips;
         [SerializeField, Range(0f, 1f)] float m_Volume = 0.72f;
 
         static bool s_IsAnyScarePlaying;
@@ -148,9 +148,25 @@ namespace PhasmophobiAR.Ghosts
         void PlayScareAudio()
         {
             EnsureAudioSource();
-            if (m_JumpScareClip == null) m_FallbackClip ??= CreateFallbackScareClip();
-            var clip = m_JumpScareClip != null ? m_JumpScareClip : m_FallbackClip;
+            var clip = GetRandomClip(m_JumpScareClips);
+            if (clip == null)
+            {
+                m_FallbackClip ??= CreateFallbackScareClip();
+                clip = m_FallbackClip;
+            }
             if (m_AudioSource != null && clip != null) m_AudioSource.PlayOneShot(clip, m_Volume);
+        }
+
+        static AudioClip GetRandomClip(AudioClip[] clips)
+        {
+            if (clips == null || clips.Length == 0) return null;
+            var start = Random.Range(0, clips.Length);
+            for (var offset = 0; offset < clips.Length; offset++)
+            {
+                var clip = clips[(start + offset) % clips.Length];
+                if (clip != null) return clip;
+            }
+            return null;
         }
 
         void EnsureAudioSource()

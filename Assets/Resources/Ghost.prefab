@@ -118,7 +118,10 @@ MonoBehaviour:
   m_HoldDurationSeconds: 0.16
   m_DisappearDurationSeconds: 0.12
   m_VisualScale: 0.62
-  m_JumpScareClip: {fileID: 0}
+  m_JumpScareClips:
+  - {fileID: 8300000, guid: 2569bbfb62c6b4ae6984b54b7ad3df56, type: 3}
+  - {fileID: 8300000, guid: d95e80e9120b14712929b8da42c4c498, type: 3}
+  - {fileID: 8300000, guid: e059bf5e0bba344dfa68d6439e7f2d41, type: 3}
   m_Volume: 0.72
 --- !u!114 &5478500053394186510
 MonoBehaviour:
@@ -164,7 +167,9 @@ MonoBehaviour:
   m_MaximumVisibleSeconds: 1.6
   m_VisualScale: 0.28
   m_Visibility: 0.45
-  m_PlaceholderSound: {fileID: 0}
+  m_DirectionalWhisperClips:
+  - {fileID: 8300000, guid: 4a41414cf5f394e59afc0b4109c18b3d, type: 3}
+  - {fileID: 8300000, guid: 5fab146879ce847b788e3d34e5a98b66, type: 3}
   m_Volume: 0.35
 --- !u!114 &6832040681264598664
 MonoBehaviour:
@@ -211,7 +216,9 @@ MonoBehaviour:
   m_RaycastHeightMeters: 1.5
   m_RaycastDistanceMeters: 4
   m_FallbackFloorBelowCameraMeters: 1.35
-  m_FootstepClips: []
+  m_FootstepClips:
+  - {fileID: 8300000, guid: 25e93a945945a4f909377e8362029cf3, type: 3}
+  - {fileID: 8300000, guid: 6dc64f26938d441db82a23a06deef6e3, type: 3}
   m_Volume: 0.85
   m_PitchRange: {x: 0.82, y: 1.08}
   m_SpatialBlend: 0.65
@@ -242,7 +249,9 @@ MonoBehaviour:
   m_CooldownSeconds: 20
   m_MaxTriggersPerInvestigation: 3
   m_DurationRangeSeconds: {x: 2.8, y: 4.8}
-  m_BreathingClip: {fileID: 0}
+  m_BreathingClips:
+  - {fileID: 8300000, guid: 2331f024cdbaa47219bec5b80ac1ec0a, type: 3}
+  - {fileID: 8300000, guid: 2b62e4820748c4c99bde0b67073a48a8, type: 3}
   m_Volume: 0.52
   m_SpatialBlend: 0.05
   m_StereoPan: 0.48
