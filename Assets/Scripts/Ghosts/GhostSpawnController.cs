@@ -333,14 +333,9 @@ namespace PhasmophobiAR.Ghosts
 
             var behavior = ghost.GetComponent<GhostBehaviorController>();
             if (behavior == null)
-            {
-                jumpScare.Configure(m_GameStateManager, m_ARCamera, null);
-                Debug.LogError("Scene ghost requires GhostBehaviorController.", ghost);
-                return;
-            }
+                behavior = ghost.AddComponent<GhostBehaviorController>();
 
             behavior.Configure(m_GhostCaseController != null ? m_GhostCaseController.CurrentProfile : null, m_ARCamera);
-            jumpScare.Configure(m_GameStateManager, m_ARCamera, behavior);
 
             var revealCapture = ghost.GetComponent<GhostRevealCaptureController>();
             if (revealCapture == null)
@@ -358,6 +353,14 @@ namespace PhasmophobiAR.Ghosts
             var captureAudio = ghost.GetComponent<GhostCaptureAudioController>();
             if (captureAudio != null)
                 captureAudio.Configure(revealCapture);
+
+            var director = ghost.GetComponent<HorrorDirector>();
+            if (director == null)
+                director = ghost.AddComponent<HorrorDirector>();
+            if (ghost.GetComponent<PeripheralApparitionEvent>() == null)
+                ghost.AddComponent<PeripheralApparitionEvent>();
+            director.Configure(m_GameStateManager, m_ARCamera, behavior, revealCapture);
+            jumpScare.Configure(m_GameStateManager, m_ARCamera, behavior, director);
 
         }
 

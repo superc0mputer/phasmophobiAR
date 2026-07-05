@@ -6,6 +6,7 @@ namespace PhasmophobiAR.Ghosts
     public sealed class GhostVisualRandomizer : MonoBehaviour
     {
         public string SelectedVisualName { get; private set; }
+        public GameObject SelectedVisualPrefab { get; private set; }
 
         public bool Randomize()
         {
@@ -17,6 +18,7 @@ namespace PhasmophobiAR.Ghosts
             }
 
             var selectedPrefab = visualPrefabs[Random.Range(0, visualPrefabs.Length)];
+            SelectedVisualPrefab = selectedPrefab;
             var visual = Instantiate(selectedPrefab, transform);
             visual.name = selectedPrefab.name;
             visual.transform.localPosition = Vector3.zero;

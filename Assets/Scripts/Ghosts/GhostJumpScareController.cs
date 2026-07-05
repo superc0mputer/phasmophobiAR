@@ -34,12 +34,16 @@ namespace PhasmophobiAR.Ghosts
         int m_ScareCount;
         bool m_IsConfigured;
         GameObject m_ActiveScareObject;
+        HorrorDirector m_HorrorDirector;
 
-        public void Configure(GameStateManager gameState, Transform arCamera, GhostBehaviorController ghostBehavior)
+        public bool IsScarePlaying => m_ActiveScareObject != null;
+
+        public void Configure(GameStateManager gameState, Transform arCamera, GhostBehaviorController ghostBehavior, HorrorDirector horrorDirector = null)
         {
             m_GameState = gameState != null ? gameState : GameStateManager.Instance;
             m_ARCamera = arCamera != null ? arCamera : Camera.main != null ? Camera.main.transform : null;
             m_GhostBehavior = ghostBehavior != null ? ghostBehavior : GetComponent<GhostBehaviorController>();
+            m_HorrorDirector = horrorDirector;
             EnsureAudioSource();
             ResetSchedule();
             m_IsConfigured = true;
@@ -70,6 +74,7 @@ namespace PhasmophobiAR.Ghosts
         bool CanArmScare()
         {
             if (s_IsAnyScarePlaying || m_ScareCount >= m_MaxScaresPerInvestigation) return false;
+            if (m_HorrorDirector != null && m_HorrorDirector.IsPlayingEvent) return false;
             if (m_GameState != null && m_GameState.CurrentPhase != GamePhase.Investigation) return false;
             return m_GhostBehavior == null || m_GhostBehavior.RevealState != GhostRevealState.Captured;
         }
@@ -80,14 +85,19 @@ namespace PhasmophobiAR.Ghosts
             m_ScareCount++;
             ScheduleNextScare();
 
-            var prefabs = GhostVisualCatalog.LoadPrefabs();
-            if (prefabs.Length == 0)
+            var selectedPrefab = m_HorrorDirector != null ? m_HorrorDirector.SelectedVisualPrefab : null;
+            if (selectedPrefab == null)
             {
-                s_IsAnyScarePlaying = false;
-                yield break;
+                var prefabs = GhostVisualCatalog.LoadPrefabs();
+                if (prefabs.Length == 0)
+                {
+                    s_IsAnyScarePlaying = false;
+                    yield break;
+                }
+                selectedPrefab = prefabs[Random.Range(0, prefabs.Length)];
             }
 
-            var scareObject = Instantiate(prefabs[Random.Range(0, prefabs.Length)], m_ARCamera);
+            var scareObject = Instantiate(selectedPrefab, m_ARCamera);
             m_ActiveScareObject = scareObject;
             scareObject.name = "JumpScareGhost";
             scareObject.transform.localRotation = Quaternion.Euler(0f, 180f, Random.Range(-3f, 3f));
@@ -188,7 +198,8 @@ namespace PhasmophobiAR.Ghosts
         {
             var min = Mathf.Max(10f, Mathf.Min(m_CooldownRangeSeconds.x, m_CooldownRangeSeconds.y));
             var max = Mathf.Max(min, Mathf.Max(m_CooldownRangeSeconds.x, m_CooldownRangeSeconds.y));
-            m_NextScareTime = Time.unscaledTime + Random.Range(min, max);
+            var aggressionMultiplier = m_HorrorDirector != null ? Mathf.Lerp(1f, 0.58f, m_HorrorDirector.Aggression) : 1f;
+            m_NextScareTime = Time.unscaledTime + Random.Range(min, max) * aggressionMultiplier;
         }
 
         bool IsInvestigationActive() => m_GameState == null || m_GameState.CurrentPhase == GamePhase.Investigation;

@@ -26,6 +26,7 @@ namespace PhasmophobiAR.Ghosts
         GameStateManager m_GameState;
         GhostBehaviorController m_GhostBehavior;
         GhostRevealCaptureController m_CaptureController;
+        GhostJumpScareController m_JumpScareController;
         Transform m_ARCamera;
         float m_NextEventTime;
         bool m_IsPlayingEvent;
@@ -36,6 +37,7 @@ namespace PhasmophobiAR.Ghosts
         public GhostBehaviorController GhostBehavior => m_GhostBehavior;
         public GhostRevealCaptureController CaptureController => m_CaptureController;
         public bool IsPlayingEvent => m_IsPlayingEvent;
+        public GameObject SelectedVisualPrefab { get; private set; }
 
         public void Configure(GameStateManager gameState, Transform arCamera, GhostBehaviorController behavior, GhostRevealCaptureController capture)
         {
@@ -43,6 +45,9 @@ namespace PhasmophobiAR.Ghosts
             m_ARCamera = arCamera != null ? arCamera : Camera.main != null ? Camera.main.transform : null;
             m_GhostBehavior = behavior;
             m_CaptureController = capture;
+            m_JumpScareController = GetComponent<GhostJumpScareController>();
+            var visualRandomizer = GetComponent<GhostVisualRandomizer>();
+            SelectedVisualPrefab = visualRandomizer != null ? visualRandomizer.SelectedVisualPrefab : null;
             CacheEvents();
             ResetDirector();
         }
@@ -64,7 +69,7 @@ namespace PhasmophobiAR.Ghosts
         void Update()
         {
             if (m_GameState != null && m_GameState.CurrentPhase != GamePhase.Investigation) return;
-            if (m_ARCamera == null || m_IsPlayingEvent) return;
+            if (m_ARCamera == null || m_IsPlayingEvent || (m_JumpScareController != null && m_JumpScareController.IsScarePlaying)) return;
 
             IncreaseTension(Time.unscaledDeltaTime);
             var urgentEvent = SelectUrgentEvent();
