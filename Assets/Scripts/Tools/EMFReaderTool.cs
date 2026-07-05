@@ -88,6 +88,13 @@ namespace PhasmophobiAR.Tools
         public int CurrentLevel => m_CurrentLevel;
         public bool HasRecordedSpike => m_HasRecordedSpike;
 
+        /// <summary>Allows the unified camera UI to replace the oversized legacy hologram without disabling the tool.</summary>
+        public void SetLegacyVisualsVisible(bool visible)
+        {
+            if (m_HologramRoot != null)
+                m_HologramRoot.gameObject.SetActive(visible);
+        }
+
         void Awake()
         {
             if (m_GameStateManager == null)

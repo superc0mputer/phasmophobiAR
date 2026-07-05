@@ -71,7 +71,15 @@ namespace PhasmophobiAR.Tools
         bool m_HasRecordedFreezing;
 
         public float CurrentCelsius => m_CurrentCelsius;
+        public bool IsFreezing => m_CurrentCelsius <= m_FreezingEvidenceThresholdCelsius;
         public bool HasRecordedFreezing => m_HasRecordedFreezing;
+
+        /// <summary>Hides only the old holographic gauge; sensing and the physical device remain active.</summary>
+        public void SetLegacyVisualsVisible(bool visible)
+        {
+            if (m_HologramRoot != null)
+                m_HologramRoot.gameObject.SetActive(visible);
+        }
 
         void Awake()
         {
