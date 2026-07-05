@@ -37,6 +37,8 @@ namespace PhasmophobiAR.Ghosts
         bool m_IsResultDelayActive;
         bool m_HasCaptureActivity;
         bool m_HasReportedInterruption;
+        bool m_CaptureRequested;
+        bool m_HasCompletedCapture;
         float m_ResultDelayTimer;
         float m_CaptureElapsedSeconds;
         float m_FakeCaptureFailureRemaining;
@@ -47,6 +49,8 @@ namespace PhasmophobiAR.Ghosts
         public GhostRevealState CurrentState => m_StateMachine != null ? m_StateMachine.CurrentState : GhostRevealState.Hidden;
         public float CaptureProgress => m_StateMachine != null ? m_StateMachine.CaptureProgress : 0f;
         public bool IsFakeCaptureFailureActive => m_FakeCaptureFailureRemaining > 0f;
+        public bool CaptureRequested => m_CaptureRequested;
+        public bool HasCompletedCapture => m_HasCompletedCapture;
 
         public event Action CaptureSucceeded;
         public event Action<string> CaptureInterrupted;
@@ -112,7 +116,7 @@ namespace PhasmophobiAR.Ghosts
 
             var previousState = m_StateMachine.CurrentState;
             var previousProgress = m_StateMachine.CaptureProgress;
-            var nextState = m_StateMachine.Tick(distance, angle, confidence, Time.deltaTime);
+            var nextState = m_StateMachine.Tick(distance, angle, confidence, Time.deltaTime, m_CaptureRequested && !m_HasCompletedCapture);
             ApplyStateChange(previousState, nextState);
             ApplyVisualState();
 
@@ -154,11 +158,31 @@ namespace PhasmophobiAR.Ghosts
             m_HasReportedInterruption = false;
             m_CaptureElapsedSeconds = 0f;
             m_FakeCaptureFailureRemaining = 0f;
+            m_CaptureRequested = false;
+            m_HasCompletedCapture = false;
+        }
+
+        public void RequestCapture()
+        {
+            if (m_HasCompletedCapture)
+                return;
+
+            m_CaptureRequested = true;
+            OpenManifestationWindowForCapture();
+        }
+
+        void OpenManifestationWindowForCapture()
+        {
+            if (!m_UseManifestationWindows)
+                return;
+
+            m_IsManifestationWindowActive = true;
+            m_ManifestationEndTime = Time.unscaledTime + RandomRange(m_ManifestationDurationSeconds, 1f);
         }
 
         public bool BeginFakeCaptureFailure(float durationSeconds)
         {
-            if (m_StateMachine == null || m_StateMachine.CurrentState != GhostRevealState.Capturing || m_FakeCaptureFailureRemaining > 0f)
+            if (!m_CaptureRequested || m_StateMachine == null || m_StateMachine.CurrentState != GhostRevealState.Capturing || m_FakeCaptureFailureRemaining > 0f)
                 return false;
 
             m_FakeCaptureFailureRemaining = Mathf.Max(0.1f, durationSeconds);
@@ -176,6 +200,12 @@ namespace PhasmophobiAR.Ghosts
 
             // Never pull the ghost away while the player is actively capturing it.
             if (state == GhostRevealState.Capturing || state == GhostRevealState.Captured)
+            {
+                m_IsManifestationWindowActive = true;
+                return true;
+            }
+
+            if (m_CaptureRequested && !m_HasCompletedCapture)
             {
                 m_IsManifestationWindowActive = true;
                 return true;
@@ -255,9 +285,10 @@ namespace PhasmophobiAR.Ghosts
                 m_GameStateManager.RecordCaptureOutcome("Success", CaptureProgress, m_CaptureElapsedSeconds, string.Empty);
 
             m_HasTriggeredResult = true;
-            CaptureSucceeded?.Invoke();
+            m_HasCompletedCapture = true;
             if (m_GameStateManager != null && m_GameStateManager.CurrentPhase == GamePhase.Investigation)
-                m_GameStateManager.ShowResult();
+                m_GameStateManager.PrepareResult();
+            CaptureSucceeded?.Invoke();
         }
 
         void HandleCaptureInterrupted()

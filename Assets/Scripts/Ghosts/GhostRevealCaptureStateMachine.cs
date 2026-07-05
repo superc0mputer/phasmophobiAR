@@ -31,7 +31,7 @@ namespace PhasmophobiAR.Ghosts
             CurrentState = GhostRevealState.Hidden;
         }
 
-        public GhostRevealState Tick(float distanceMeters, float viewAngleDegrees, TrackingConfidence trackingConfidence, float deltaTime)
+        public GhostRevealState Tick(float distanceMeters, float viewAngleDegrees, TrackingConfidence trackingConfidence, float deltaTime, bool canCapture = true)
         {
             deltaTime = Mathf.Max(0f, deltaTime);
 
@@ -41,7 +41,7 @@ namespace PhasmophobiAR.Ghosts
             IsGhostInsideCaptureZone = EvaluateCaptureZone(distanceMeters, viewAngleDegrees);
 
             UpdateRevealTimers(hasStableTracking, partialScore, revealScore, deltaTime);
-            UpdateState(hasStableTracking, partialScore, revealScore, deltaTime);
+            UpdateState(hasStableTracking, partialScore, revealScore, deltaTime, canCapture);
 
             return CurrentState;
         }
@@ -59,7 +59,7 @@ namespace PhasmophobiAR.Ghosts
                 m_RevealTime = Mathf.Max(0f, m_RevealTime - deltaTime);
         }
 
-        void UpdateState(bool hasStableTracking, float partialScore, float revealScore, float deltaTime)
+        void UpdateState(bool hasStableTracking, float partialScore, float revealScore, float deltaTime, bool canCapture)
         {
             if (CurrentState == GhostRevealState.Captured)
             {
@@ -73,8 +73,10 @@ namespace PhasmophobiAR.Ghosts
             if ((CurrentState == GhostRevealState.Hidden || CurrentState == GhostRevealState.PartialReveal) && m_RevealTime >= m_Settings.revealHoldSeconds)
                 CurrentState = GhostRevealState.Revealed;
 
-            if (CurrentState == GhostRevealState.Revealed || CurrentState == GhostRevealState.Capturing)
+            if ((CurrentState == GhostRevealState.Revealed || CurrentState == GhostRevealState.Capturing) && canCapture)
                 UpdateCaptureState(hasStableTracking, partialScore, revealScore, deltaTime);
+            else if (CurrentState == GhostRevealState.Capturing)
+                CurrentState = GhostRevealState.Revealed;
 
             if (CurrentState == GhostRevealState.PartialReveal && partialScore <= 0f && m_PartialRevealTime <= 0f)
                 CurrentState = GhostRevealState.Hidden;

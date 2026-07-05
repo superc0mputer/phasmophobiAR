@@ -111,21 +111,29 @@ namespace PhasmophobiAR.Game
 
         public void ShowResult()
         {
+            PrepareResult();
+
+            SetPhase(GamePhase.Result);
+        }
+
+        public RoundResult PrepareResult()
+        {
+            if (m_LastRoundResult != null && m_LastCaptureOutcome != CaptureOutcome.None)
+                return m_LastRoundResult;
+
             if (m_IdentificationController == null)
                 m_IdentificationController = IdentificationController.Instance;
 
-            if (m_IdentificationController != null)
-            {
-                m_LastRoundResult = m_IdentificationController.Evaluate();
-                ApplyCaptureOutcome(m_LastRoundResult);
-                ResultPrepared?.Invoke(m_LastRoundResult);
-            }
-            else
+            if (m_IdentificationController == null)
             {
                 Debug.LogWarning("Result requested without an IdentificationController in the scene.");
+                return null;
             }
 
-            SetPhase(GamePhase.Result);
+            m_LastRoundResult = m_IdentificationController.Evaluate();
+            ApplyCaptureOutcome(m_LastRoundResult);
+            ResultPrepared?.Invoke(m_LastRoundResult);
+            return m_LastRoundResult;
         }
 
         public void ResetRound()

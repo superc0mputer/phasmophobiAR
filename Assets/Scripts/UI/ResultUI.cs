@@ -20,6 +20,8 @@ namespace PhasmophobiAR.UI
         [SerializeField]
         Button m_ResetButton;
 
+        bool m_IsShowingResult;
+
         void Awake()
         {
             if (m_GameStateManager == null)
@@ -38,6 +40,7 @@ namespace PhasmophobiAR.UI
             {
                 m_ResetButton.onClick.RemoveListener(PlayAgain);
                 m_ResetButton.onClick.AddListener(PlayAgain);
+                SetButtonLabel(m_ResetButton, "Next Round");
             }
         }
 
@@ -63,8 +66,11 @@ namespace PhasmophobiAR.UI
 
         void OnPhaseChanged(GamePhase phase)
         {
+            if (phase == GamePhase.Setup || phase == GamePhase.RoomScan)
+                m_IsShowingResult = false;
+
             if (m_ResultRoot != null)
-                m_ResultRoot.SetActive(phase == GamePhase.Result);
+                m_ResultRoot.SetActive(m_IsShowingResult || phase == GamePhase.Result);
         }
 
         void OnResultPrepared(RoundResult result)
@@ -72,13 +78,17 @@ namespace PhasmophobiAR.UI
             if (m_ResultText == null || result == null)
                 return;
 
+            m_IsShowingResult = true;
+            if (m_ResultRoot != null)
+                m_ResultRoot.SetActive(true);
+
             var actual = GhostProfileCatalog.GetProfile(result.actualGhostType)?.displayName ?? result.actualGhostType.ToString();
             var selected = result.hasSelection
                 ? GhostProfileCatalog.GetProfile(result.selectedGhostType)?.displayName ?? result.selectedGhostType.ToString()
                 : "None";
 
             var builder = new StringBuilder();
-            builder.AppendLine(result.isCorrect ? "CASE CLOSED" : "CASE UNRESOLVED");
+            builder.AppendLine(result.isCorrect ? "CASE SOLVED" : "CASE UNSOLVED");
             builder.AppendLine(result.isCorrect ? "Your identification matched the haunting." : "Your journal entry did not match the entity.");
             builder.AppendLine();
             builder.AppendLine($"Entity: {actual}");
@@ -91,7 +101,21 @@ namespace PhasmophobiAR.UI
 
         void PlayAgain()
         {
+            m_IsShowingResult = false;
+            if (m_ResultRoot != null)
+                m_ResultRoot.SetActive(false);
+
             m_GameStateManager?.PlayAgain();
+        }
+
+        static void SetButtonLabel(Button button, string text)
+        {
+            if (button == null)
+                return;
+
+            var label = button.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+                label.text = text;
         }
 
         static string FormatEvidence(EvidenceType[] evidence)

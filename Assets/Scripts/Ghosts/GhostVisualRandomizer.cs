@@ -17,6 +17,8 @@ namespace PhasmophobiAR.Ghosts
                 return false;
             }
 
+            ClearExistingVisuals(visualPrefabs);
+
             var selectedPrefab = visualPrefabs[Random.Range(0, visualPrefabs.Length)];
             SelectedVisualPrefab = selectedPrefab;
             var visual = Instantiate(selectedPrefab, transform);
@@ -26,6 +28,36 @@ namespace PhasmophobiAR.Ghosts
             visual.transform.localScale = Vector3.one;
             SelectedVisualName = selectedPrefab.name;
             return true;
+        }
+
+        void ClearExistingVisuals(GameObject[] visualPrefabs)
+        {
+            for (var i = transform.childCount - 1; i >= 0; i--)
+            {
+                var child = transform.GetChild(i);
+                if (child != null && IsGhostVisual(child.gameObject, visualPrefabs))
+                {
+                    child.gameObject.SetActive(false);
+                    Destroy(child.gameObject);
+                }
+            }
+
+            SelectedVisualName = null;
+            SelectedVisualPrefab = null;
+        }
+
+        static bool IsGhostVisual(GameObject candidate, GameObject[] visualPrefabs)
+        {
+            if (candidate == null || visualPrefabs == null)
+                return false;
+
+            foreach (var prefab in visualPrefabs)
+            {
+                if (prefab != null && candidate.name == prefab.name)
+                    return true;
+            }
+
+            return false;
         }
 
     }
