@@ -34,14 +34,6 @@ namespace PhasmophobiAR.Ghosts
         [SerializeField, Min(0f)] float m_FootprintHoverHeightMeters = 0.06f;
         [SerializeField] Color m_FootprintGlowColor = new Color(0.78f, 0.98f, 1f, 0.18f);
 
-        [Header("Editor / simulator fallback")]
-        [SerializeField] bool m_ForceVisibleInEditor = true;
-        [SerializeField] Vector2 m_EditorStartDistanceRangeMeters = new Vector2(0.9f, 1.35f);
-        [SerializeField] float m_EditorStrideMeters = 0.34f;
-        [SerializeField] Vector2Int m_EditorStepCountRange = new Vector2Int(5, 7);
-
-        bool m_HasPlayedEditorFallback;
-
         GameObject m_AudioObject;
         AudioClip m_GeneratedPlaceholder;
         Mesh m_FootprintMesh;
@@ -60,36 +52,26 @@ namespace PhasmophobiAR.Ghosts
             source.minDistance = 0.35f;
             source.maxDistance = 7f;
 
-            var editorVisibleMode = ShouldForceVisibleInEditor();
-            var stepCount = editorVisibleMode
-                ? Random.Range(Mathf.Min(m_EditorStepCountRange.x, m_EditorStepCountRange.y), Mathf.Max(m_EditorStepCountRange.x, m_EditorStepCountRange.y) + 1)
-                : Random.Range(Mathf.Min(m_StepCountRange.x, m_StepCountRange.y), Mathf.Max(m_StepCountRange.x, m_StepCountRange.y) + 1);
-            var strideMeters = editorVisibleMode ? m_EditorStrideMeters : m_StrideMeters;
-            var startDistance = editorVisibleMode
-                ? Random.Range(Mathf.Min(m_EditorStartDistanceRangeMeters.x, m_EditorStartDistanceRangeMeters.y), Mathf.Max(m_EditorStartDistanceRangeMeters.x, m_EditorStartDistanceRangeMeters.y))
-                : Random.Range(m_StartDistanceRangeMeters.x, m_StartDistanceRangeMeters.y);
-            var cameraForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
-            if (cameraForward.sqrMagnitude < 0.001f)
-                cameraForward = cameraTransform.forward.normalized;
-
+            var stepCount = Random.Range(
+                Mathf.Min(m_StepCountRange.x, m_StepCountRange.y),
+                Mathf.Max(m_StepCountRange.x, m_StepCountRange.y) + 1);
+            var startDistance = Random.Range(m_StartDistanceRangeMeters.x, m_StartDistanceRangeMeters.y);
             var randomAngle = Random.Range(0f, Mathf.PI * 2f);
-            var radial = editorVisibleMode
-                ? cameraForward
-                : new Vector3(Mathf.Sin(randomAngle), 0f, Mathf.Cos(randomAngle));
+            var radial = new Vector3(Mathf.Sin(randomAngle), 0f, Mathf.Cos(randomAngle));
             radial = Vector3.ProjectOnPlane(radial, Vector3.up).normalized;
             if (radial.sqrMagnitude < 0.001f)
                 radial = Vector3.forward;
 
             var start = cameraTransform.position + radial * startDistance;
-            var approach = editorVisibleMode || Random.value <= m_ApproachPlayerChance;
-            var direction = editorVisibleMode
-                ? -cameraForward
-                : (approach ? -radial : Vector3.Cross(Vector3.up, radial) * (Random.value < 0.5f ? -1f : 1f));
+            var approach = Random.value <= m_ApproachPlayerChance;
+            var direction = approach
+                ? -radial
+                : Vector3.Cross(Vector3.up, radial) * (Random.value < 0.5f ? -1f : 1f);
 
             for (var i = 0; i < stepCount && director != null && director.isActiveAndEnabled; i++)
             {
                 var lateralFoot = Vector3.Cross(Vector3.up, direction) * (i % 2 == 0 ? -0.11f : 0.11f);
-                var desiredPosition = start + direction * (strideMeters * i) + lateralFoot;
+                var desiredPosition = start + direction * (m_StrideMeters * i) + lateralFoot;
                 var floorPosition = FindFloorPosition(desiredPosition, cameraTransform, director.GhostBehavior);
                 m_AudioObject.transform.position = floorPosition;
                 SpawnFootprint(floorPosition, direction, i % 2 == 0);
@@ -107,13 +89,6 @@ namespace PhasmophobiAR.Ghosts
 
             ClearAudioObject();
             director.AddTension(0.035f);
-            if (editorVisibleMode)
-                m_HasPlayedEditorFallback = true;
-        }
-
-        internal override bool WantsImmediateTrigger(HorrorDirector director)
-        {
-            return ShouldForceVisibleInEditor() && !m_HasPlayedEditorFallback;
         }
 
         void SpawnFootprint(Vector3 position, Vector3 walkingDirection, bool leftFoot)
@@ -282,11 +257,6 @@ namespace PhasmophobiAR.Ghosts
             ClearFootprints();
         }
 
-        protected override void OnReset()
-        {
-            m_HasPlayedEditorFallback = false;
-        }
-
         void OnDisable()
         {
             ClearAudioObject();
@@ -316,11 +286,6 @@ namespace PhasmophobiAR.Ghosts
                 Destroy(footprint);
             }
             m_ActiveFootprints.Clear();
-        }
-
-        bool ShouldForceVisibleInEditor()
-        {
-            return m_ForceVisibleInEditor && Application.isEditor;
         }
 
         Material CreateFootprintMaterial(Color color)
