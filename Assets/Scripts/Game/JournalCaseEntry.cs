@@ -11,6 +11,10 @@ namespace PhasmophobiAR.Game
         public bool hasSelection;
         public bool isCorrect;
         public EvidenceType[] recordedEvidence;
+        public CaptureOutcome captureOutcome;
+        public float captureProgress;
+        public float captureDurationSeconds;
+        public string captureReason;
 
         public JournalCaseEntry(RoundResult result)
         {
@@ -20,6 +24,10 @@ namespace PhasmophobiAR.Game
             hasSelection = result != null && result.hasSelection;
             isCorrect = result != null && result.isCorrect;
             recordedEvidence = result != null ? result.recordedEvidence : Array.Empty<EvidenceType>();
+            captureOutcome = result != null ? result.captureOutcome : CaptureOutcome.None;
+            captureProgress = result != null ? result.captureProgress : 0f;
+            captureDurationSeconds = result != null ? result.captureDurationSeconds : 0f;
+            captureReason = result != null ? result.captureReason : string.Empty;
         }
     }
 }

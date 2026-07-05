@@ -23,7 +23,22 @@ namespace PhasmophobiAR.UI
         TMP_Text m_CurrentModeText;
 
         [SerializeField]
+        TMP_Text m_CurrentPhaseText;
+
+        [SerializeField]
         TMP_Text m_ModeReadoutText;
+
+        [SerializeField]
+        TMP_Text m_SwitchModeButtonLabel;
+
+        [SerializeField]
+        bool m_AutoFitSwitchModeButtonLabel = true;
+
+        [SerializeField]
+        float m_SwitchModeButtonMaxFontSize = 18f;
+
+        [SerializeField]
+        float m_SwitchModeButtonMinFontSize = 10f;
 
         [SerializeField]
         EMFSignalController m_EMFSignalController;
@@ -93,6 +108,8 @@ namespace PhasmophobiAR.UI
             if (m_SpiritResponseTool == null)
                 m_SpiritResponseTool = FindAnyObjectByType<SpiritResponseTool>();
 
+            ResolveOptionalUIReferences();
+
             if (changed)
                 SubscribeEvents();
 
@@ -157,18 +174,24 @@ namespace PhasmophobiAR.UI
 
         void UpdateUI()
         {
-            bool isInvestigation = m_GameStateManager != null && m_GameStateManager.CurrentPhase == GamePhase.Investigation;
+            var currentPhase = m_GameStateManager != null ? m_GameStateManager.CurrentPhase : GamePhase.Setup;
+            bool isInvestigation = currentPhase == GamePhase.Investigation;
 
             if (m_SwitchModeButton != null)
                 m_SwitchModeButton.interactable = isInvestigation;
 
-            if (m_CurrentModeText != null && m_ScannerModeManager != null)
+            if (m_CurrentPhaseText != null)
+                m_CurrentPhaseText.text = GetPhaseLabel(currentPhase);
+
+            if (m_CurrentModeText != null)
             {
-                m_CurrentModeText.text = isInvestigation
-                    ? GetModeLabel(m_ScannerModeManager.CurrentMode)
-                    : "Scanner offline";
+                if (m_ScannerModeManager != null && isInvestigation)
+                    m_CurrentModeText.text = $"MODE: {GetModeLabel(m_ScannerModeManager.CurrentMode)}";
+                else
+                    m_CurrentModeText.text = $"{GetPhaseLabel(currentPhase)} / SCANNER OFFLINE";
             }
 
+            UpdateSwitchModeButtonLabel(isInvestigation);
             UpdateReadout();
         }
 
@@ -240,6 +263,68 @@ namespace PhasmophobiAR.UI
                 m_SpiritResponseTool = FindAnyObjectByType<SpiritResponseTool>();
 
             return m_SpiritResponseTool;
+        }
+
+        void ResolveOptionalUIReferences()
+        {
+            if (m_SwitchModeButtonLabel == null && m_SwitchModeButton != null)
+                m_SwitchModeButtonLabel = m_SwitchModeButton.GetComponentInChildren<TMP_Text>(true);
+
+            ConfigureSwitchModeButtonLabel();
+        }
+
+        void ConfigureSwitchModeButtonLabel()
+        {
+            if (m_SwitchModeButtonLabel == null || !m_AutoFitSwitchModeButtonLabel)
+                return;
+
+            m_SwitchModeButtonLabel.enableAutoSizing = true;
+            m_SwitchModeButtonLabel.fontSizeMax = m_SwitchModeButtonMaxFontSize;
+            m_SwitchModeButtonLabel.fontSizeMin = m_SwitchModeButtonMinFontSize;
+            m_SwitchModeButtonLabel.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        void UpdateSwitchModeButtonLabel(bool isInvestigation)
+        {
+            if (m_SwitchModeButtonLabel == null)
+                ResolveOptionalUIReferences();
+
+            if (m_SwitchModeButtonLabel == null)
+                return;
+
+            if (!isInvestigation || m_ScannerModeManager == null)
+            {
+                m_SwitchModeButtonLabel.text = "Scanner locked";
+                return;
+            }
+
+            m_SwitchModeButtonLabel.text = $"Next: {GetModeLabel(GetNextMode(m_ScannerModeManager.CurrentMode))}";
+        }
+
+        static ScannerMode GetNextMode(ScannerMode mode)
+        {
+            var nextMode = (int)mode + 1;
+            if (!Enum.IsDefined(typeof(ScannerMode), nextMode))
+                nextMode = 0;
+
+            return (ScannerMode)nextMode;
+        }
+
+        static string GetPhaseLabel(GamePhase phase)
+        {
+            switch (phase)
+            {
+                case GamePhase.Setup:
+                    return "SETUP";
+                case GamePhase.RoomScan:
+                    return "ROOM SCAN";
+                case GamePhase.Investigation:
+                    return "INVESTIGATION";
+                case GamePhase.Result:
+                    return "RESULT";
+                default:
+                    return phase.ToString().ToUpperInvariant();
+            }
         }
 
         static string GetModeLabel(ScannerMode mode)

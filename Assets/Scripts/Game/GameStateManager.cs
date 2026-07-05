@@ -29,6 +29,10 @@ namespace PhasmophobiAR.Game
         bool m_HasCompletedRoomScan;
         RoomScanResult m_LastRoomScanResult;
         RoundResult m_LastRoundResult;
+        CaptureOutcome m_LastCaptureOutcome = CaptureOutcome.None;
+        float m_LastCaptureProgress;
+        float m_LastCaptureDurationSeconds;
+        string m_LastCaptureReason = string.Empty;
 
         public event Action<GamePhase> PhaseChanged;
         public event Action ScanCompleted;
@@ -41,6 +45,10 @@ namespace PhasmophobiAR.Game
         public bool CanPlaceTools => m_CurrentPhase == GamePhase.Investigation;
         public bool CanCaptureGhost => m_CurrentPhase == GamePhase.Investigation;
         public RoundResult LastRoundResult => m_LastRoundResult;
+        public CaptureOutcome LastCaptureOutcome => m_LastCaptureOutcome;
+        public float LastCaptureProgress => m_LastCaptureProgress;
+        public float LastCaptureDurationSeconds => m_LastCaptureDurationSeconds;
+        public string LastCaptureReason => m_LastCaptureReason;
         public UnityEvent<GamePhase> phaseChanged => m_PhaseChanged;
         public UnityEvent scanCompleted => m_ScanCompleted;
 
@@ -109,6 +117,7 @@ namespace PhasmophobiAR.Game
             if (m_IdentificationController != null)
             {
                 m_LastRoundResult = m_IdentificationController.Evaluate();
+                ApplyCaptureOutcome(m_LastRoundResult);
                 ResultPrepared?.Invoke(m_LastRoundResult);
             }
             else
@@ -124,6 +133,7 @@ namespace PhasmophobiAR.Game
             m_HasCompletedRoomScan = false;
             m_LastRoomScanResult = null;
             m_LastRoundResult = null;
+            ResetCaptureOutcome();
             ResetRoundState();
             SetPhase(GamePhase.Setup);
         }
@@ -138,11 +148,20 @@ namespace PhasmophobiAR.Game
             }
 
             m_LastRoundResult = null;
+            ResetCaptureOutcome();
             ResetRoundState();
             SetPhase(GamePhase.Investigation);
             m_ScanCompleted.Invoke();
             ScanCompleted?.Invoke();
             ScanCompletedWithResult?.Invoke(m_LastRoomScanResult);
+        }
+
+        public void RecordCaptureOutcome(string outcomeName, float progress, float durationSeconds, string reason = null)
+        {
+            m_LastCaptureOutcome = ParseCaptureOutcome(outcomeName);
+            m_LastCaptureProgress = Mathf.Clamp01(progress);
+            m_LastCaptureDurationSeconds = Mathf.Max(0f, durationSeconds);
+            m_LastCaptureReason = reason ?? string.Empty;
         }
 
         void ResetRoundState()
@@ -152,6 +171,40 @@ namespace PhasmophobiAR.Game
             IdentificationController.Instance?.ClearSelection();
             GhostCaseController.Instance?.BeginNewCase();
             GhostSpawnController.Instance?.ResetSpawnedGhosts();
+        }
+
+        void ResetCaptureOutcome()
+        {
+            m_LastCaptureOutcome = CaptureOutcome.None;
+            m_LastCaptureProgress = 0f;
+            m_LastCaptureDurationSeconds = 0f;
+            m_LastCaptureReason = string.Empty;
+        }
+
+        void ApplyCaptureOutcome(RoundResult result)
+        {
+            if (result == null)
+                return;
+
+            result.captureOutcome = m_LastCaptureOutcome;
+            result.captureProgress = m_LastCaptureProgress;
+            result.captureDurationSeconds = m_LastCaptureDurationSeconds;
+            result.captureReason = m_LastCaptureReason;
+        }
+
+        static CaptureOutcome ParseCaptureOutcome(string outcomeName)
+        {
+            switch (outcomeName)
+            {
+                case nameof(CaptureOutcome.Success):
+                    return CaptureOutcome.Success;
+                case nameof(CaptureOutcome.Interrupted):
+                    return CaptureOutcome.Interrupted;
+                case nameof(CaptureOutcome.Failed):
+                    return CaptureOutcome.Failed;
+                default:
+                    return CaptureOutcome.None;
+            }
         }
 
         void SetPhase(GamePhase nextPhase)

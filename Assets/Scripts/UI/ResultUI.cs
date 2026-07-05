@@ -83,6 +83,7 @@ namespace PhasmophobiAR.UI
             builder.AppendLine();
             builder.AppendLine($"Entity: {actual}");
             builder.AppendLine($"Filed as: {selected}");
+            builder.AppendLine($"Capture: {FormatCaptureOutcome(result)}");
             builder.Append("Evidence marked: ");
             builder.Append(FormatEvidence(result.recordedEvidence));
             m_ResultText.text = builder.ToString();
@@ -123,6 +124,24 @@ namespace PhasmophobiAR.UI
                     return "Spirit Response";
                 default:
                     return evidenceType.ToString();
+            }
+        }
+
+        static string FormatCaptureOutcome(RoundResult result)
+        {
+            if (result == null)
+                return "Unknown";
+
+            switch (result.captureOutcome)
+            {
+                case CaptureOutcome.Success:
+                    return $"Success ({result.captureProgress * 100f:0}% in {result.captureDurationSeconds:0.0}s)";
+                case CaptureOutcome.Interrupted:
+                    return $"Interrupted ({result.captureProgress * 100f:0}% reached)";
+                case CaptureOutcome.Failed:
+                    return "Failed";
+                default:
+                    return "Not recorded";
             }
         }
     }
