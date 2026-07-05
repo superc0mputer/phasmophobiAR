@@ -27,14 +27,23 @@ namespace PhasmophobiAR.Ghosts
         [SerializeField, Range(0f, 1f)] float m_SpatialBlend = 0.65f;
 
         [Header("Visible footprints")]
-        [SerializeField] Color m_FootprintColor = new Color(0.16f, 0.2f, 0.26f, 0.92f);
-        [SerializeField] Vector2 m_FootprintSizeMeters = new Vector2(0.19f, 0.38f);
-        [SerializeField, Min(0.1f)] float m_FootprintLifetimeSeconds = 7.5f;
-        [SerializeField, Min(0f)] float m_FootprintFadeSeconds = 2.75f;
+        [SerializeField] Color m_FootprintColor = new Color(0.62f, 0.9f, 1f, 0.48f);
+        [SerializeField] Vector2 m_FootprintSizeMeters = new Vector2(0.22f, 0.42f);
+        [SerializeField, Min(0.1f)] float m_FootprintLifetimeSeconds = 8.5f;
+        [SerializeField, Min(0f)] float m_FootprintFadeSeconds = 3.25f;
+        [SerializeField, Min(0f)] float m_FootprintHoverHeightMeters = 0.06f;
+        [SerializeField] Color m_FootprintGlowColor = new Color(0.78f, 0.98f, 1f, 0.18f);
+
+        [Header("Editor / simulator fallback")]
+        [SerializeField] bool m_ForceVisibleInEditor = true;
+        [SerializeField] Vector2 m_EditorStartDistanceRangeMeters = new Vector2(0.9f, 1.35f);
+        [SerializeField] float m_EditorStrideMeters = 0.34f;
+        [SerializeField] Vector2Int m_EditorStepCountRange = new Vector2Int(5, 7);
+
+        bool m_HasPlayedEditorFallback;
 
         GameObject m_AudioObject;
         AudioClip m_GeneratedPlaceholder;
-        Texture2D m_FootprintTexture;
         Mesh m_FootprintMesh;
         readonly List<GameObject> m_ActiveFootprints = new List<GameObject>();
 
@@ -51,18 +60,36 @@ namespace PhasmophobiAR.Ghosts
             source.minDistance = 0.35f;
             source.maxDistance = 7f;
 
-            var stepCount = Random.Range(Mathf.Min(m_StepCountRange.x, m_StepCountRange.y), Mathf.Max(m_StepCountRange.x, m_StepCountRange.y) + 1);
-            var startDistance = Random.Range(m_StartDistanceRangeMeters.x, m_StartDistanceRangeMeters.y);
-            var angle = Random.Range(0f, Mathf.PI * 2f);
-            var radial = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+            var editorVisibleMode = ShouldForceVisibleInEditor();
+            var stepCount = editorVisibleMode
+                ? Random.Range(Mathf.Min(m_EditorStepCountRange.x, m_EditorStepCountRange.y), Mathf.Max(m_EditorStepCountRange.x, m_EditorStepCountRange.y) + 1)
+                : Random.Range(Mathf.Min(m_StepCountRange.x, m_StepCountRange.y), Mathf.Max(m_StepCountRange.x, m_StepCountRange.y) + 1);
+            var strideMeters = editorVisibleMode ? m_EditorStrideMeters : m_StrideMeters;
+            var startDistance = editorVisibleMode
+                ? Random.Range(Mathf.Min(m_EditorStartDistanceRangeMeters.x, m_EditorStartDistanceRangeMeters.y), Mathf.Max(m_EditorStartDistanceRangeMeters.x, m_EditorStartDistanceRangeMeters.y))
+                : Random.Range(m_StartDistanceRangeMeters.x, m_StartDistanceRangeMeters.y);
+            var cameraForward = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up).normalized;
+            if (cameraForward.sqrMagnitude < 0.001f)
+                cameraForward = cameraTransform.forward.normalized;
+
+            var randomAngle = Random.Range(0f, Mathf.PI * 2f);
+            var radial = editorVisibleMode
+                ? cameraForward
+                : new Vector3(Mathf.Sin(randomAngle), 0f, Mathf.Cos(randomAngle));
+            radial = Vector3.ProjectOnPlane(radial, Vector3.up).normalized;
+            if (radial.sqrMagnitude < 0.001f)
+                radial = Vector3.forward;
+
             var start = cameraTransform.position + radial * startDistance;
-            var approach = Random.value <= m_ApproachPlayerChance;
-            var direction = approach ? -radial : Vector3.Cross(Vector3.up, radial) * (Random.value < 0.5f ? -1f : 1f);
+            var approach = editorVisibleMode || Random.value <= m_ApproachPlayerChance;
+            var direction = editorVisibleMode
+                ? -cameraForward
+                : (approach ? -radial : Vector3.Cross(Vector3.up, radial) * (Random.value < 0.5f ? -1f : 1f));
 
             for (var i = 0; i < stepCount && director != null && director.isActiveAndEnabled; i++)
             {
                 var lateralFoot = Vector3.Cross(Vector3.up, direction) * (i % 2 == 0 ? -0.11f : 0.11f);
-                var desiredPosition = start + direction * (m_StrideMeters * i) + lateralFoot;
+                var desiredPosition = start + direction * (strideMeters * i) + lateralFoot;
                 var floorPosition = FindFloorPosition(desiredPosition, cameraTransform, director.GhostBehavior);
                 m_AudioObject.transform.position = floorPosition;
                 SpawnFootprint(floorPosition, direction, i % 2 == 0);
@@ -80,20 +107,22 @@ namespace PhasmophobiAR.Ghosts
 
             ClearAudioObject();
             director.AddTension(0.035f);
+            if (editorVisibleMode)
+                m_HasPlayedEditorFallback = true;
+        }
+
+        internal override bool WantsImmediateTrigger(HorrorDirector director)
+        {
+            return ShouldForceVisibleInEditor() && !m_HasPlayedEditorFallback;
         }
 
         void SpawnFootprint(Vector3 position, Vector3 walkingDirection, bool leftFoot)
         {
-            var shader = Shader.Find("PhasmophobiAR/Ghost Footprint");
-            if (shader == null)
-            {
-                Debug.LogWarning("Ghost footprint shader could not be found.", this);
-                return;
-            }
-
-            EnsureFootprintResources();
+            EnsureFootprintMesh();
             var footprint = new GameObject(leftFoot ? "Left Ghost Footprint" : "Right Ghost Footprint");
-            footprint.transform.SetPositionAndRotation(position, Quaternion.LookRotation(walkingDirection.normalized, Vector3.up));
+            footprint.transform.SetPositionAndRotation(
+                position + Vector3.up * m_FootprintHoverHeightMeters,
+                Quaternion.LookRotation(walkingDirection.normalized, Vector3.up));
             footprint.transform.localScale = new Vector3(
                 (leftFoot ? -1f : 1f) * Mathf.Max(0.01f, m_FootprintSizeMeters.x),
                 1f,
@@ -101,68 +130,75 @@ namespace PhasmophobiAR.Ghosts
 
             footprint.AddComponent<MeshFilter>().sharedMesh = m_FootprintMesh;
             var renderer = footprint.AddComponent<MeshRenderer>();
-            var material = new Material(shader);
-            material.SetTexture("_BaseMap", m_FootprintTexture);
-            material.SetColor("_BaseColor", m_FootprintColor);
+            var material = CreateFootprintMaterial(m_FootprintColor);
+            material.renderQueue = (int)RenderQueue.Transparent + 50;
             renderer.sharedMaterial = material;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
 
             m_ActiveFootprints.Add(footprint);
-            StartCoroutine(FadeFootprint(footprint, renderer, material));
+            StartCoroutine(FadeFootprint(footprint, material));
         }
 
-        void EnsureFootprintResources()
+        void EnsureFootprintMesh()
         {
-            if (m_FootprintMesh == null)
-            {
-                m_FootprintMesh = new Mesh { name = "Runtime Ghost Footprint" };
-                m_FootprintMesh.vertices = new[]
-                {
-                    new Vector3(-0.5f, 0f, -0.5f), new Vector3(0.5f, 0f, -0.5f),
-                    new Vector3(-0.5f, 0f, 0.5f), new Vector3(0.5f, 0f, 0.5f)
-                };
-                m_FootprintMesh.uv = new[] { Vector2.zero, Vector2.right, Vector2.up, Vector2.one };
-                m_FootprintMesh.triangles = new[] { 0, 2, 1, 1, 2, 3 };
-                m_FootprintMesh.RecalculateBounds();
-            }
+            if (m_FootprintMesh != null)
+                return;
 
-            if (m_FootprintTexture != null) return;
-            const int width = 64;
-            const int height = 128;
-            m_FootprintTexture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            var outline = new[]
             {
-                name = "Runtime Ghost Footprint Mask",
-                filterMode = FilterMode.Bilinear,
-                wrapMode = TextureWrapMode.Clamp
+                new Vector2(0f, -1.0f),
+                new Vector2(0.28f, -0.9f),
+                new Vector2(0.38f, -0.66f),
+                new Vector2(0.33f, -0.28f),
+                new Vector2(0.22f, 0.06f),
+                new Vector2(0.38f, 0.34f),
+                new Vector2(0.42f, 0.52f),
+                new Vector2(0.34f, 0.76f),
+                new Vector2(0.2f, 0.98f),
+                new Vector2(0.08f, 1.08f),
+                new Vector2(-0.04f, 1.12f),
+                new Vector2(-0.16f, 1.08f),
+                new Vector2(-0.28f, 0.98f),
+                new Vector2(-0.38f, 0.84f),
+                new Vector2(-0.44f, 0.66f),
+                new Vector2(-0.47f, 0.46f),
+                new Vector2(-0.34f, 0.18f),
+                new Vector2(-0.19f, -0.06f),
+                new Vector2(-0.16f, -0.28f),
+                new Vector2(-0.22f, -0.56f),
+                new Vector2(-0.16f, -0.82f)
             };
-            var pixels = new Color32[width * height];
-            for (var y = 0; y < height; y++)
-            for (var x = 0; x < width; x++)
+
+            var vertices = new Vector3[outline.Length + 1];
+            var uvs = new Vector2[vertices.Length];
+            vertices[0] = Vector3.zero;
+            uvs[0] = new Vector2(0.5f, 0.5f);
+            for (var i = 0; i < outline.Length; i++)
             {
-                var u = (x + 0.5f) / width * 2f - 1f;
-                var v = (y + 0.5f) / height * 2f - 1f;
-                var heel = EllipseMask(u, v, 0f, -0.62f, 0.43f, 0.31f);
-                var arch = EllipseMask(u, v, -0.11f, -0.12f, 0.34f, 0.48f);
-                var ball = EllipseMask(u, v, 0.05f, 0.32f, 0.49f, 0.34f);
-                var toe = EllipseMask(u, v, 0.18f, 0.72f, 0.28f, 0.20f);
-                var smallToe = EllipseMask(u, v, -0.22f, 0.64f, 0.18f, 0.14f);
-                var alpha = Mathf.Clamp01(Mathf.Max(heel, arch, ball, toe, smallToe));
-                pixels[y * width + x] = new Color32(255, 255, 255, (byte)(alpha * 255f));
+                vertices[i + 1] = new Vector3(outline[i].x, 0f, outline[i].y * 0.5f);
+                uvs[i + 1] = new Vector2(outline[i].x * 0.5f + 0.5f, outline[i].y * 0.25f + 0.5f);
             }
-            m_FootprintTexture.SetPixels32(pixels);
-            m_FootprintTexture.Apply(false, true);
+
+            var triangles = new int[outline.Length * 3];
+            for (var i = 0; i < outline.Length; i++)
+            {
+                var next = i + 1 < outline.Length ? i + 2 : 1;
+                var tri = i * 3;
+                triangles[tri] = 0;
+                triangles[tri + 1] = i + 1;
+                triangles[tri + 2] = next;
+            }
+
+            m_FootprintMesh = new Mesh { name = "Runtime Ghost Footprint" };
+            m_FootprintMesh.vertices = vertices;
+            m_FootprintMesh.uv = uvs;
+            m_FootprintMesh.triangles = triangles;
+            m_FootprintMesh.RecalculateNormals();
+            m_FootprintMesh.RecalculateBounds();
         }
 
-        static float EllipseMask(float x, float y, float centerX, float centerY, float radiusX, float radiusY)
-        {
-            var distance = Mathf.Sqrt(
-                Mathf.Pow((x - centerX) / radiusX, 2f) +
-                Mathf.Pow((y - centerY) / radiusY, 2f));
-            return 1f - Mathf.SmoothStep(0.72f, 1f, distance);
-        }
-
-        IEnumerator FadeFootprint(GameObject footprint, Renderer renderer, Material material)
+        IEnumerator FadeFootprint(GameObject footprint, Material material)
         {
             var lifetime = Mathf.Max(0.1f, m_FootprintLifetimeSeconds);
             var fadeDuration = Mathf.Min(lifetime, Mathf.Max(0f, m_FootprintFadeSeconds));
@@ -175,7 +211,7 @@ namespace PhasmophobiAR.Ghosts
                 {
                     var color = m_FootprintColor;
                     color.a *= 1f - Mathf.Clamp01((elapsed - fadeStart) / fadeDuration);
-                    material.SetColor("_BaseColor", color);
+                    ApplyFootprintColor(material, color);
                 }
                 yield return null;
             }
@@ -246,6 +282,11 @@ namespace PhasmophobiAR.Ghosts
             ClearFootprints();
         }
 
+        protected override void OnReset()
+        {
+            m_HasPlayedEditorFallback = false;
+        }
+
         void OnDisable()
         {
             ClearAudioObject();
@@ -254,7 +295,6 @@ namespace PhasmophobiAR.Ghosts
 
         void OnDestroy()
         {
-            if (m_FootprintTexture != null) Destroy(m_FootprintTexture);
             if (m_FootprintMesh != null) Destroy(m_FootprintMesh);
         }
 
@@ -276,6 +316,71 @@ namespace PhasmophobiAR.Ghosts
                 Destroy(footprint);
             }
             m_ActiveFootprints.Clear();
+        }
+
+        bool ShouldForceVisibleInEditor()
+        {
+            return m_ForceVisibleInEditor && Application.isEditor;
+        }
+
+        Material CreateFootprintMaterial(Color color)
+        {
+            var shader = Shader.Find("PhasmophobiAR/Ghost Footprint");
+            if (shader == null)
+                shader = Shader.Find("Unlit/Transparent");
+            if (shader == null)
+                shader = Shader.Find("Sprites/Default");
+
+            if (shader == null)
+            {
+                Debug.LogWarning("No suitable shader found for ghost footprints.", this);
+                return new Material(Shader.Find("Standard"));
+            }
+
+            var material = new Material(shader);
+            ApplyFootprintMaterial(material, color);
+            return material;
+        }
+
+        void ApplyFootprintMaterial(Material material, Color color)
+        {
+            if (material == null)
+                return;
+
+            if (material.HasProperty("_Color"))
+                material.SetColor("_Color", color);
+
+            if (material.HasProperty("_BaseColor"))
+                material.SetColor("_BaseColor", color);
+
+            if (material.HasProperty("_GlowColor"))
+                material.SetColor("_GlowColor", m_FootprintGlowColor);
+
+            if (material.HasProperty("_Surface"))
+                material.SetFloat("_Surface", 1f);
+
+            if (material.HasProperty("_Blend"))
+                material.SetFloat("_Blend", 0f);
+
+            if (material.HasProperty("_ZWrite"))
+                material.SetFloat("_ZWrite", 0f);
+
+            if (material.HasProperty("_Cull"))
+                material.SetFloat("_Cull", (float)CullMode.Off);
+
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        }
+
+        static void ApplyFootprintColor(Material material, Color color)
+        {
+            if (material == null)
+                return;
+
+            if (material.HasProperty("_Color"))
+                material.SetColor("_Color", color);
+
+            if (material.HasProperty("_BaseColor"))
+                material.SetColor("_BaseColor", color);
         }
     }
 }
