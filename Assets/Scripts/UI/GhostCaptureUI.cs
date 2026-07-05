@@ -136,7 +136,9 @@ namespace PhasmophobiAR.UI
             if (m_CaptureStateText != null)
             {
                 m_CaptureStateText.gameObject.SetActive(true);
-                m_CaptureStateText.text = m_CaptureController.CurrentState switch
+                m_CaptureStateText.text = m_CaptureController.IsFakeCaptureFailureActive
+                    ? "SIGNAL LOST"
+                    : m_CaptureController.CurrentState switch
                 {
                     GhostRevealState.Hidden => "Hold still to reveal",
                     GhostRevealState.PartialReveal => "Ghost is stirring",

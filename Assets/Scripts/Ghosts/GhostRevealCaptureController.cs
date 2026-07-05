@@ -33,9 +33,11 @@ namespace PhasmophobiAR.Ghosts
         bool m_HasReportedInterruption;
         float m_ResultDelayTimer;
         float m_CaptureElapsedSeconds;
+        float m_FakeCaptureFailureRemaining;
 
         public GhostRevealState CurrentState => m_StateMachine != null ? m_StateMachine.CurrentState : GhostRevealState.Hidden;
         public float CaptureProgress => m_StateMachine != null ? m_StateMachine.CaptureProgress : 0f;
+        public bool IsFakeCaptureFailureActive => m_FakeCaptureFailureRemaining > 0f;
 
         public event Action CaptureSucceeded;
         public event Action<string> CaptureInterrupted;
@@ -79,6 +81,15 @@ namespace PhasmophobiAR.Ghosts
 
             if (m_GameStateManager != null && m_GameStateManager.CurrentPhase != GamePhase.Investigation)
                 return;
+
+            if (m_FakeCaptureFailureRemaining > 0f)
+            {
+                m_FakeCaptureFailureRemaining = Mathf.Max(0f, m_FakeCaptureFailureRemaining - Time.unscaledDeltaTime);
+                m_GhostBehavior.SetRevealState(GhostRevealState.Hidden, CaptureProgress);
+                if (m_FakeCaptureFailureRemaining <= 0f)
+                    ApplyVisualState();
+                return;
+            }
 
             var confidence = m_RoomScanController != null ? m_RoomScanController.Confidence : TrackingConfidence.Good;
             var ghostPosition = m_GhostBehavior.transform.position;
@@ -129,6 +140,17 @@ namespace PhasmophobiAR.Ghosts
             m_HasCaptureActivity = false;
             m_HasReportedInterruption = false;
             m_CaptureElapsedSeconds = 0f;
+            m_FakeCaptureFailureRemaining = 0f;
+        }
+
+        public bool BeginFakeCaptureFailure(float durationSeconds)
+        {
+            if (m_StateMachine == null || m_StateMachine.CurrentState != GhostRevealState.Capturing || m_FakeCaptureFailureRemaining > 0f)
+                return false;
+
+            m_FakeCaptureFailureRemaining = Mathf.Max(0.1f, durationSeconds);
+            m_GhostBehavior?.SetRevealState(GhostRevealState.Hidden, CaptureProgress);
+            return true;
         }
 
         void ApplyStateChange(GhostRevealState previousState, GhostRevealState nextState)
@@ -226,6 +248,9 @@ namespace PhasmophobiAR.Ghosts
         {
             if (phase == GamePhase.Setup || phase == GamePhase.RoomScan)
                 BuildStateMachine();
+
+            if (phase != GamePhase.Investigation)
+                m_FakeCaptureFailureRemaining = 0f;
 
             if (phase == GamePhase.Result)
             {

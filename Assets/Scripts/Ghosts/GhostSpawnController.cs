@@ -359,6 +359,8 @@ namespace PhasmophobiAR.Ghosts
                 director = ghost.AddComponent<HorrorDirector>();
             if (ghost.GetComponent<PeripheralApparitionEvent>() == null)
                 ghost.AddComponent<PeripheralApparitionEvent>();
+            if (ghost.GetComponent<FakeCaptureFailureEvent>() == null)
+                ghost.AddComponent<FakeCaptureFailureEvent>();
             director.Configure(m_GameStateManager, m_ARCamera, behavior, revealCapture);
             jumpScare.Configure(m_GameStateManager, m_ARCamera, behavior, director);
 

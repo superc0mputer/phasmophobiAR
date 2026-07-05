@@ -12,6 +12,9 @@ GameObject:
   - component: {fileID: 1096143833721273602}
   - component: {fileID: -1550357350723196786}
   - component: {fileID: 683145192037451928}
+  - component: {fileID: 5478500053394186510}
+  - component: {fileID: 9198051253369810548}
+  - component: {fileID: 6832040681264598664}
   m_Layer: 0
   m_Name: Ghost
   m_TagString: Untagged
@@ -110,3 +113,69 @@ MonoBehaviour:
   m_VisualScale: 0.62
   m_JumpScareClip: {fileID: 0}
   m_Volume: 0.72
+--- !u!114 &5478500053394186510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8c1956cd4544b418dbfc9770c67fd70, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.HorrorDirector
+  m_StartingTension: 0.08
+  m_PassiveTensionPerSecond: 0.0035
+  m_NearGhostTensionPerSecond: 0.007
+  m_CaptureTensionPerSecond: 0.018
+  m_NearGhostDistanceMeters: 2.5
+  m_InitialQuietPeriodSeconds: 14
+  m_EventIntervalAtLowTension: {x: 28, y: 45}
+  m_EventIntervalAtHighTension: {x: 10, y: 19}
+  m_TensionReliefAfterEvent: 0.08
+--- !u!114 &9198051253369810548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd1446242b1f428d99f96984f67a8de6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.PeripheralApparitionEvent
+  m_MinimumTension: 0.2
+  m_SelectionWeight: 1
+  m_CooldownSeconds: 20
+  m_MaxTriggersPerInvestigation: 3
+  m_DistanceRangeMeters: {x: 2.4, y: 3.5}
+  m_EdgeViewportPosition: 0.94
+  m_MinimumVisibleSeconds: 0.2
+  m_MaximumVisibleSeconds: 1.2
+  m_VisualScale: 0.22
+  m_Visibility: 0.32
+  m_PlaceholderSound: {fileID: 0}
+  m_Volume: 0.35
+--- !u!114 &6832040681264598664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70dbf479ae5041ec8a2d83f9510b57a4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.FakeCaptureFailureEvent
+  m_MinimumTension: 0.2
+  m_SelectionWeight: 1
+  m_CooldownSeconds: 20
+  m_MaxTriggersPerInvestigation: 3
+  m_MinimumCaptureProgress: 0.5
+  m_MaximumCaptureProgress: 0.9
+  m_FailureDurationSeconds: 0.65
+  m_PlaceholderSignalLossSound: {fileID: 0}
+  m_Volume: 0.45
