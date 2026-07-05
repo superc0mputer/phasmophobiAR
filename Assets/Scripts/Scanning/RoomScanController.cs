@@ -128,6 +128,8 @@ namespace PhasmophobiAR.Scanning
         bool m_IsScanReady;
         bool m_InvestigationStarted;
         bool m_ScanVisualsVisible = true;
+        bool m_HasInitialPlaneDetectionMode;
+        PlaneDetectionMode m_InitialPlaneDetectionMode;
 
         public float Progress => m_Progress;
         public TrackingConfidence Confidence => m_Confidence;
@@ -161,6 +163,8 @@ namespace PhasmophobiAR.Scanning
 
             if (m_ARCamera == null)
                 m_ARCamera = Camera.main;
+
+            CaptureInitialPlaneDetectionMode();
         }
 
         void OnEnable()
@@ -389,13 +393,14 @@ namespace PhasmophobiAR.Scanning
             m_IsScanReady = true;
             m_InvestigationStarted = true;
             m_Progress = 1f;
+            var result = CreateResult();
             m_ProgressChanged.Invoke(m_Progress);
             m_RoomScanCompleted.Invoke();
             RoomScanCompleted?.Invoke();
             ApplyScanVisualizationState();
 
             if (m_GameStateManager != null)
-                m_GameStateManager.CompleteRoomScan(CreateResult());
+                m_GameStateManager.CompleteRoomScan(result);
         }
 
         void OnPlanesChanged(ARTrackablesChangedEventArgs<ARPlane> eventArgs)
@@ -421,6 +426,8 @@ namespace PhasmophobiAR.Scanning
             var shouldShowVisuals = m_GameStateManager == null || m_GameStateManager.CurrentPhase == GamePhase.RoomScan;
             m_ScanVisualsVisible = shouldShowVisuals;
 
+            ApplyPlaneDiscoveryState(shouldShowVisuals);
+
             if (m_PlaneManager != null)
             {
                 foreach (var plane in m_PlaneManager.trackables)
@@ -443,6 +450,35 @@ namespace PhasmophobiAR.Scanning
                     ApplyVisibilityToObject(meshFilter.gameObject, shouldShowVisuals);
                 }
             }
+        }
+
+        void ApplyPlaneDiscoveryState(bool shouldDiscoverPlanes)
+        {
+            if (m_PlaneManager == null)
+                return;
+
+            CaptureInitialPlaneDetectionMode();
+
+            if (shouldDiscoverPlanes)
+            {
+                m_PlaneManager.enabled = true;
+                m_PlaneManager.requestedDetectionMode = m_InitialPlaneDetectionMode != PlaneDetectionMode.None
+                    ? m_InitialPlaneDetectionMode
+                    : PlaneDetectionMode.Horizontal | PlaneDetectionMode.Vertical;
+                return;
+            }
+
+            m_PlaneManager.requestedDetectionMode = PlaneDetectionMode.None;
+            m_PlaneManager.enabled = false;
+        }
+
+        void CaptureInitialPlaneDetectionMode()
+        {
+            if (m_HasInitialPlaneDetectionMode || m_PlaneManager == null)
+                return;
+
+            m_InitialPlaneDetectionMode = m_PlaneManager.requestedDetectionMode;
+            m_HasInitialPlaneDetectionMode = true;
         }
 
         static void ApplyVisibilityToTrackable(Component trackable, bool visible)

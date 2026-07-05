@@ -1,5 +1,6 @@
 using System.Text;
 using PhasmophobiAR.Game;
+using PhasmophobiAR.Ghosts;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,6 +27,9 @@ namespace PhasmophobiAR.UI
 
         [SerializeField]
         GameStateManager m_GameStateManager;
+
+        [SerializeField]
+        GhostRevealCaptureController m_CaptureController;
 
         [SerializeField]
         JournalCaseRepository m_CaseRepository;
@@ -100,6 +104,7 @@ namespace PhasmophobiAR.UI
         bool m_StartOpen;
 
         JournalPage m_CurrentPage = JournalPage.Investigation;
+        GhostRevealCaptureController m_SubscribedCaptureController;
 
         void Awake()
         {
@@ -223,8 +228,8 @@ namespace PhasmophobiAR.UI
 
             if (m_SubmitButton != null)
             {
-                m_SubmitButton.onClick.RemoveListener(SubmitIdentification);
-                m_SubmitButton.onClick.AddListener(SubmitIdentification);
+                m_SubmitButton.onClick.RemoveListener(HandleSubmitButton);
+                m_SubmitButton.onClick.AddListener(HandleSubmitButton);
             }
 
             WireGhostSelectionButtons();
@@ -270,7 +275,7 @@ namespace PhasmophobiAR.UI
             if (m_CasesTabButton != null)
                 m_CasesTabButton.onClick.RemoveListener(ShowCasesPage);
             if (m_SubmitButton != null)
-                m_SubmitButton.onClick.RemoveListener(SubmitIdentification);
+                m_SubmitButton.onClick.RemoveListener(HandleSubmitButton);
 
             if (m_GhostSelectionButtons != null)
             {
@@ -298,6 +303,13 @@ namespace PhasmophobiAR.UI
                 m_CaseRepository.EntriesChanged -= RefreshCasesPage;
             if (m_GameStateManager != null)
                 m_GameStateManager.PhaseChanged -= OnGamePhaseChanged;
+
+            if (m_SubscribedCaptureController != null)
+            {
+                m_SubscribedCaptureController.CaptureSucceeded -= OnCaptureSucceeded;
+                m_SubscribedCaptureController.CaptureInterrupted -= OnCaptureInterrupted;
+                m_SubscribedCaptureController = null;
+            }
         }
 
         void WireGhostSelectionButtons()
@@ -381,6 +393,9 @@ namespace PhasmophobiAR.UI
 
         public void Open()
         {
+            if (!CanShowJournalOpenButton())
+                return;
+
             SetOpen(true);
         }
 
@@ -391,6 +406,9 @@ namespace PhasmophobiAR.UI
 
         void SetOpen(bool isOpen)
         {
+            if (isOpen && !CanShowJournalOpenButton())
+                isOpen = false;
+
             if (m_JournalRoot != null)
                 m_JournalRoot.SetActive(isOpen);
 
@@ -400,6 +418,7 @@ namespace PhasmophobiAR.UI
 
         void OnGamePhaseChanged(GamePhase phase)
         {
+            RefreshOpenButtonVisibility();
             Close();
         }
 
@@ -449,7 +468,7 @@ namespace PhasmophobiAR.UI
             RefreshInvestigationPage();
         }
 
-        void SubmitIdentification()
+        void HandleSubmitButton()
         {
             var gameStateManager = GameStateManager.Instance;
             if (gameStateManager == null)
@@ -461,15 +480,49 @@ namespace PhasmophobiAR.UI
                 return;
             }
 
-            gameStateManager.ShowResult();
+            ResolveReferences();
+            if (m_IdentificationController == null || !m_IdentificationController.HasSelection)
+            {
+                Debug.LogWarning($"{nameof(GhostJournalUI)} blocked capture request before selecting a ghost.");
+                return;
+            }
+
+            if (m_CaptureController == null)
+            {
+                Debug.LogWarning($"{nameof(GhostJournalUI)} cannot start capture without a {nameof(GhostRevealCaptureController)}.");
+                return;
+            }
+
+            if (m_CaptureController.HasCompletedCapture)
+            {
+                Debug.LogWarning($"{nameof(GhostJournalUI)} blocked duplicate submission after capture result was already recorded.");
+                return;
+            }
+
+            m_CaptureController.RequestCapture();
+            Close();
+            RefreshInvestigationPage();
         }
 
         void RefreshAll()
         {
+            RefreshOpenButtonVisibility();
             RefreshPageVisibility();
             RefreshInvestigationPage();
             RefreshReferencePage();
             RefreshCasesPage();
+        }
+
+        void RefreshOpenButtonVisibility()
+        {
+            if (m_OpenButton != null)
+                m_OpenButton.gameObject.SetActive(CanShowJournalOpenButton());
+        }
+
+        bool CanShowJournalOpenButton()
+        {
+            ResolveReferences();
+            return m_GameStateManager != null && m_GameStateManager.CurrentPhase == GamePhase.Investigation;
         }
 
         void RefreshPageVisibility()
@@ -505,7 +558,35 @@ namespace PhasmophobiAR.UI
             }
 
             if (m_SubmitButton != null)
-                m_SubmitButton.interactable = m_IdentificationController != null && m_IdentificationController.HasSelection;
+                RefreshSubmitButton();
+        }
+
+        void RefreshSubmitButton()
+        {
+            if (m_SubmitButton == null)
+                return;
+
+            ResolveReferences();
+            var hasSelection = m_IdentificationController != null && m_IdentificationController.HasSelection;
+            var canCapture = hasSelection
+                && m_CaptureController != null
+                && !m_CaptureController.CaptureRequested
+                && !m_CaptureController.HasCompletedCapture;
+            var hasCompletedCapture = m_CaptureController != null && m_CaptureController.HasCompletedCapture;
+
+            m_SubmitButton.gameObject.SetActive(hasSelection && !hasCompletedCapture);
+            m_SubmitButton.interactable = canCapture;
+
+            var label = m_SubmitButton.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+            {
+                if (m_CaptureController != null && m_CaptureController.HasCompletedCapture)
+                    label.text = "Captured";
+                else if (m_CaptureController != null && m_CaptureController.CaptureRequested)
+                    label.text = "Capture active";
+                else
+                    label.text = "Start Capture";
+            }
         }
 
         void RefreshReferencePage()
@@ -579,8 +660,60 @@ namespace PhasmophobiAR.UI
                 m_IdentificationController = IdentificationController.Instance;
             if (m_GameStateManager == null)
                 m_GameStateManager = GameStateManager.Instance;
+            if (m_CaptureController == null)
+                m_CaptureController = FindCaptureController();
             if (m_CaseRepository == null)
                 m_CaseRepository = JournalCaseRepository.Instance;
+
+            SubscribeCaptureController();
+        }
+
+        static GhostRevealCaptureController FindCaptureController()
+        {
+            var spawnedGhosts = GhostSpawnController.GetSpawnedGhostInfos();
+            foreach (var info in spawnedGhosts)
+            {
+                if (info?.ghostTransform == null)
+                    continue;
+
+                var controller = info.ghostTransform.GetComponent<GhostRevealCaptureController>();
+                if (controller != null)
+                    return controller;
+            }
+
+            return FindAnyObjectByType<GhostRevealCaptureController>();
+        }
+
+        void SubscribeCaptureController()
+        {
+            if (m_CaptureController == m_SubscribedCaptureController)
+                return;
+
+            if (m_SubscribedCaptureController != null)
+            {
+                m_SubscribedCaptureController.CaptureSucceeded -= OnCaptureSucceeded;
+                m_SubscribedCaptureController.CaptureInterrupted -= OnCaptureInterrupted;
+            }
+
+            m_SubscribedCaptureController = m_CaptureController;
+
+            if (m_SubscribedCaptureController != null)
+            {
+                m_SubscribedCaptureController.CaptureSucceeded -= OnCaptureSucceeded;
+                m_SubscribedCaptureController.CaptureSucceeded += OnCaptureSucceeded;
+                m_SubscribedCaptureController.CaptureInterrupted -= OnCaptureInterrupted;
+                m_SubscribedCaptureController.CaptureInterrupted += OnCaptureInterrupted;
+            }
+        }
+
+        void OnCaptureSucceeded()
+        {
+            RefreshAll();
+        }
+
+        void OnCaptureInterrupted(string reason)
+        {
+            RefreshInvestigationPage();
         }
 
         void EnsureRestartButton()

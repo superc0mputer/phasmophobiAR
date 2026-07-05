@@ -103,7 +103,7 @@ namespace PhasmophobiAR.UI
         void OnPhaseChanged(GamePhase phase)
         {
             if (m_CaptureRoot != null)
-                m_CaptureRoot.SetActive(phase == GamePhase.Investigation);
+                m_CaptureRoot.SetActive(IsStatusUiActive());
 
             UpdateUI();
         }
@@ -111,42 +111,101 @@ namespace PhasmophobiAR.UI
         void UpdateUI()
         {
             if (m_CaptureController == null)
-                m_CaptureController = FindAnyObjectByType<GhostRevealCaptureController>();
+                m_CaptureController = FindCaptureController();
 
-            var active = m_GameStateManager == null || m_GameStateManager.CurrentPhase == GamePhase.Investigation;
+            var active = IsStatusUiActive();
             if (m_CaptureRoot != null)
                 m_CaptureRoot.SetActive(active);
 
-            if (m_CaptureController == null || !active)
+            if (!active)
                 return;
 
-            var progress = m_CaptureController.CaptureProgress;
+            var showCaptureProgress = m_CaptureController != null
+                && m_CaptureController.CaptureRequested
+                && !m_CaptureController.HasCompletedCapture;
+            var progress = m_CaptureController != null ? m_CaptureController.CaptureProgress : 0f;
+
             if (m_CaptureProgressSlider != null)
             {
-                m_CaptureProgressSlider.gameObject.SetActive(true);
+                m_CaptureProgressSlider.gameObject.SetActive(showCaptureProgress);
                 m_CaptureProgressSlider.value = progress;
             }
 
             if (m_CaptureProgressText != null)
             {
-                m_CaptureProgressText.gameObject.SetActive(true);
+                m_CaptureProgressText.gameObject.SetActive(showCaptureProgress);
                 m_CaptureProgressText.text = $"{Mathf.RoundToInt(progress * 100f)}%";
             }
 
             if (m_CaptureStateText != null)
             {
                 m_CaptureStateText.gameObject.SetActive(true);
-                m_CaptureStateText.text = m_CaptureController.IsFakeCaptureFailureActive
-                    ? "SIGNAL LOST"
-                    : m_CaptureController.CurrentState switch
+                m_CaptureStateText.text = GetStatusText();
+            }
+        }
+
+        bool IsStatusUiActive()
+        {
+            if (m_GameStateManager != null && m_GameStateManager.CurrentPhase != GamePhase.Investigation)
+                return false;
+
+            if (m_CaptureController == null)
+                m_CaptureController = FindCaptureController();
+
+            return m_CaptureController == null || !m_CaptureController.HasCompletedCapture;
+        }
+
+        static GhostRevealCaptureController FindCaptureController()
+        {
+            var spawnedGhosts = GhostSpawnController.GetSpawnedGhostInfos();
+            foreach (var info in spawnedGhosts)
+            {
+                if (info?.ghostTransform == null)
+                    continue;
+
+                var controller = info.ghostTransform.GetComponent<GhostRevealCaptureController>();
+                if (controller != null)
+                    return controller;
+            }
+
+            return FindAnyObjectByType<GhostRevealCaptureController>();
+        }
+
+        string GetStatusText()
+        {
+            if (m_CaptureController == null)
+                return "Hold still to reveal";
+
+            if (m_CaptureController.IsFakeCaptureFailureActive)
+                return "SIGNAL LOST";
+
+            if (!m_CaptureController.CaptureRequested)
+            {
+                switch (m_CaptureController.CurrentState)
                 {
-                    GhostRevealState.Hidden => "Hold still to reveal",
-                    GhostRevealState.PartialReveal => "Ghost is stirring",
-                    GhostRevealState.Revealed => "Center the ghost",
-                    GhostRevealState.Capturing => "Capturing...",
-                    GhostRevealState.Captured => "Captured",
-                    _ => ""
-                };
+                    case GhostRevealState.PartialReveal:
+                        return "Ghost is stirring";
+                    case GhostRevealState.Revealed:
+                    case GhostRevealState.Capturing:
+                    case GhostRevealState.Captured:
+                        return "Ghost revealed";
+                    default:
+                        return "Hold still to reveal";
+                }
+            }
+
+            switch (m_CaptureController.CurrentState)
+            {
+                case GhostRevealState.PartialReveal:
+                    return "Ghost is stirring";
+                case GhostRevealState.Revealed:
+                    return "Center the ghost";
+                case GhostRevealState.Capturing:
+                    return "Capturing...";
+                case GhostRevealState.Captured:
+                    return "Captured";
+                default:
+                    return "Hold still to reveal";
             }
         }
     }
