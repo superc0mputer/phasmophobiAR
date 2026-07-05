@@ -5,16 +5,14 @@ namespace PhasmophobiAR.Ghosts
     /// <summary>Chooses a finished visual prefab without consulting the gameplay ghost type.</summary>
     public sealed class GhostVisualRandomizer : MonoBehaviour
     {
-        const string VisualPrefabResourcesPath = "Ghosts/Prefabs";
-
         public string SelectedVisualName { get; private set; }
 
         public bool Randomize()
         {
-            var visualPrefabs = Resources.LoadAll<GameObject>(VisualPrefabResourcesPath);
-            if (visualPrefabs == null || visualPrefabs.Length == 0)
+            var visualPrefabs = GhostVisualCatalog.LoadPrefabs();
+            if (visualPrefabs.Length == 0)
             {
-                Debug.LogError($"No ghost visual prefabs found in Resources/{VisualPrefabResourcesPath}.", this);
+                Debug.LogError("No ghost visual prefabs were found in Resources/Ghosts/Prefabs.", this);
                 return false;
             }
 
@@ -28,5 +26,15 @@ namespace PhasmophobiAR.Ghosts
             return true;
         }
 
+    }
+
+    static class GhostVisualCatalog
+    {
+        const string VisualPrefabResourcesPath = "Ghosts/Prefabs";
+
+        public static GameObject[] LoadPrefabs()
+        {
+            return Resources.LoadAll<GameObject>(VisualPrefabResourcesPath);
+        }
     }
 }

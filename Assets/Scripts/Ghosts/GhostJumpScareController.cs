@@ -8,8 +8,6 @@ namespace PhasmophobiAR.Ghosts
     [DisallowMultipleComponent]
     public sealed class GhostJumpScareController : MonoBehaviour
     {
-        const string VisualPrefabResourcesPath = "Ghosts/Prefabs";
-
         [Header("Frequency")]
         [SerializeField] float m_FirstScareDelaySeconds = 22f;
         [SerializeField] Vector2 m_CooldownRangeSeconds = new Vector2(38f, 65f);
@@ -82,8 +80,8 @@ namespace PhasmophobiAR.Ghosts
             m_ScareCount++;
             ScheduleNextScare();
 
-            var prefabs = Resources.LoadAll<GameObject>(VisualPrefabResourcesPath);
-            if (prefabs == null || prefabs.Length == 0)
+            var prefabs = GhostVisualCatalog.LoadPrefabs();
+            if (prefabs.Length == 0)
             {
                 s_IsAnyScarePlaying = false;
                 yield break;
