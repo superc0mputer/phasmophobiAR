@@ -553,6 +553,7 @@ namespace PhasmophobiAR.UI
                 builder.AppendLine($"{actual} - {(entry.isCorrect ? "Correct" : "Incorrect")}");
                 builder.AppendLine($"Selected: {selected}");
                 builder.AppendLine($"Evidence: {FormatEvidenceInline(entry.recordedEvidence)}");
+                builder.AppendLine($"Capture: {FormatCaptureOutcome(entry)}");
                 builder.AppendLine();
             }
 
@@ -705,6 +706,24 @@ namespace PhasmophobiAR.UI
                 default:
                     evidenceType = default;
                     return false;
+            }
+        }
+
+        static string FormatCaptureOutcome(JournalCaseEntry entry)
+        {
+            if (entry == null)
+                return "Unknown";
+
+            switch (entry.captureOutcome)
+            {
+                case CaptureOutcome.Success:
+                    return $"Success ({entry.captureProgress * 100f:0}% in {entry.captureDurationSeconds:0.0}s)";
+                case CaptureOutcome.Interrupted:
+                    return $"Interrupted ({entry.captureProgress * 100f:0}% reached)";
+                case CaptureOutcome.Failed:
+                    return "Failed";
+                default:
+                    return "Not recorded";
             }
         }
 

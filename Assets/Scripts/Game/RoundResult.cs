@@ -11,6 +11,13 @@ namespace PhasmophobiAR.Game
         public bool isCorrect;
         public EvidenceType[] recordedEvidence;
         public GhostType[] possibleGhostTypes;
+        public CaptureOutcome captureOutcome;
+        public float captureProgress;
+        public float captureDurationSeconds;
+        public string captureReason;
+
+        public bool captureSucceeded => captureOutcome == CaptureOutcome.Success;
+        public bool captureInterrupted => captureOutcome == CaptureOutcome.Interrupted || captureOutcome == CaptureOutcome.Failed;
 
         public RoundResult(
             GhostType actualGhostType,
@@ -26,6 +33,10 @@ namespace PhasmophobiAR.Game
             this.isCorrect = isCorrect;
             this.recordedEvidence = recordedEvidence ?? Array.Empty<EvidenceType>();
             this.possibleGhostTypes = possibleGhostTypes ?? Array.Empty<GhostType>();
+            captureOutcome = CaptureOutcome.None;
+            captureProgress = 0f;
+            captureDurationSeconds = 0f;
+            captureReason = string.Empty;
         }
     }
 }

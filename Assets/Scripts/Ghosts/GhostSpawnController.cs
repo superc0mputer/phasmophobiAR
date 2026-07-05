@@ -340,6 +340,22 @@ namespace PhasmophobiAR.Ghosts
                 behavior = ghost.AddComponent<GhostBehaviorController>();
 
             behavior.Configure(m_GhostCaseController != null ? m_GhostCaseController.CurrentProfile : null, m_ARCamera);
+
+            var revealCapture = ghost.GetComponent<GhostRevealCaptureController>();
+            if (revealCapture == null)
+                revealCapture = ghost.AddComponent<GhostRevealCaptureController>();
+
+            revealCapture.Configure(
+                m_GameStateManager,
+                UnityEngine.Object.FindAnyObjectByType<RoomScanController>(),
+                m_ARCamera,
+                behavior);
+
+            var captureAudio = ghost.GetComponent<GhostCaptureAudioController>();
+            if (captureAudio == null)
+                captureAudio = ghost.AddComponent<GhostCaptureAudioController>();
+
+            captureAudio.Configure(revealCapture);
         }
 
         List<SpawnCandidate> BuildSpawnCandidates(RoomScanResult scanResult, SpawnDiagnostics diagnostics)
@@ -663,11 +679,11 @@ namespace PhasmophobiAR.Ghosts
 
         static ARAnchorManager GetOrCreateAnchorManager()
         {
-            var anchorManager = UnityEngine.Object.FindFirstObjectByType<ARAnchorManager>();
+            var anchorManager = UnityEngine.Object.FindAnyObjectByType<ARAnchorManager>();
             if (anchorManager != null)
                 return anchorManager;
 
-            var xrOrigin = UnityEngine.Object.FindFirstObjectByType<XROrigin>();
+            var xrOrigin = UnityEngine.Object.FindAnyObjectByType<XROrigin>();
             if (xrOrigin == null)
                 return null;
 
