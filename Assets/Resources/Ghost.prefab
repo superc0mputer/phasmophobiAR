@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4903535396299180674}
   - component: {fileID: 1096143833721273602}
   - component: {fileID: -1550357350723196786}
+  - component: {fileID: 683145192037451928}
   m_Layer: 0
   m_Name: Ghost
   m_TagString: Untagged
@@ -66,7 +67,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5775fba3480cf40a48e2cce5fd8e0202, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.GhostRevealCaptureController
   m_GameStateManager: {fileID: 0}
   m_RoomScanController: {fileID: 0}
@@ -86,3 +87,26 @@ MonoBehaviour:
     captureProgressResetDelaySeconds: 0.4
     captureProgressBonusAtCenter: 0.25
   m_ResultDelaySeconds: 0.4
+--- !u!114 &683145192037451928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26a0493e90784317a6807801580aaf69, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.GhostJumpScareController
+  m_FirstScareDelaySeconds: 22
+  m_CooldownRangeSeconds: {x: 38, y: 65}
+  m_MaxScaresPerInvestigation: 5
+  m_StartDistanceMeters: 1.65
+  m_StopDistanceMeters: 0.48
+  m_RushDurationSeconds: 0.42
+  m_HoldDurationSeconds: 0.16
+  m_DisappearDurationSeconds: 0.12
+  m_VisualScale: 0.62
+  m_JumpScareClip: {fileID: 0}
+  m_Volume: 0.72

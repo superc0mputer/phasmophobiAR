@@ -326,14 +326,21 @@ namespace PhasmophobiAR.Ghosts
                 visualRandomizer = ghost.AddComponent<GhostVisualRandomizer>();
             visualRandomizer.Randomize();
 
+            // Jump scares can operate independently from evidence/reveal behavior.
+            var jumpScare = ghost.GetComponent<GhostJumpScareController>();
+            if (jumpScare == null)
+                jumpScare = ghost.AddComponent<GhostJumpScareController>();
+
             var behavior = ghost.GetComponent<GhostBehaviorController>();
             if (behavior == null)
             {
+                jumpScare.Configure(m_GameStateManager, m_ARCamera, null);
                 Debug.LogError("Scene ghost requires GhostBehaviorController.", ghost);
                 return;
             }
 
             behavior.Configure(m_GhostCaseController != null ? m_GhostCaseController.CurrentProfile : null, m_ARCamera);
+            jumpScare.Configure(m_GameStateManager, m_ARCamera, behavior);
 
             var revealCapture = ghost.GetComponent<GhostRevealCaptureController>();
             if (revealCapture == null)
@@ -351,6 +358,7 @@ namespace PhasmophobiAR.Ghosts
             var captureAudio = ghost.GetComponent<GhostCaptureAudioController>();
             if (captureAudio != null)
                 captureAudio.Configure(revealCapture);
+
         }
 
         List<SpawnCandidate> BuildSpawnCandidates(RoomScanResult scanResult, SpawnDiagnostics diagnostics)
