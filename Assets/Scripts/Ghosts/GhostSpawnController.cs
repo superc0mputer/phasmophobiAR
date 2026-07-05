@@ -320,12 +320,20 @@ namespace PhasmophobiAR.Ghosts
             if (m_GhostCaseController == null)
                 m_GhostCaseController = GhostCaseController.Instance;
 
+            // Appearance is deliberately selected without consulting CurrentProfile/GhostType.
+            var visualRandomizer = ghost.GetComponent<GhostVisualRandomizer>();
+            if (visualRandomizer == null)
+                visualRandomizer = ghost.AddComponent<GhostVisualRandomizer>();
+            visualRandomizer.Randomize();
+
+            // Jump scares can operate independently from evidence/reveal behavior.
+            var jumpScare = ghost.GetComponent<GhostJumpScareController>();
+            if (jumpScare == null)
+                jumpScare = ghost.AddComponent<GhostJumpScareController>();
+
             var behavior = ghost.GetComponent<GhostBehaviorController>();
             if (behavior == null)
-            {
-                Debug.LogError("Scene ghost requires GhostBehaviorController.", ghost);
-                return;
-            }
+                behavior = ghost.AddComponent<GhostBehaviorController>();
 
             behavior.Configure(m_GhostCaseController != null ? m_GhostCaseController.CurrentProfile : null, m_ARCamera);
 
@@ -345,6 +353,21 @@ namespace PhasmophobiAR.Ghosts
             var captureAudio = ghost.GetComponent<GhostCaptureAudioController>();
             if (captureAudio != null)
                 captureAudio.Configure(revealCapture);
+
+            var director = ghost.GetComponent<HorrorDirector>();
+            if (director == null)
+                director = ghost.AddComponent<HorrorDirector>();
+            if (ghost.GetComponent<PeripheralApparitionEvent>() == null)
+                ghost.AddComponent<PeripheralApparitionEvent>();
+            if (ghost.GetComponent<FakeCaptureFailureEvent>() == null)
+                ghost.AddComponent<FakeCaptureFailureEvent>();
+            if (ghost.GetComponent<EnvironmentalFootstepEvent>() == null)
+                ghost.AddComponent<EnvironmentalFootstepEvent>();
+            if (ghost.GetComponent<CloseBreathingEvent>() == null)
+                ghost.AddComponent<CloseBreathingEvent>();
+            director.Configure(m_GameStateManager, m_ARCamera, behavior, revealCapture);
+            jumpScare.Configure(m_GameStateManager, m_ARCamera, behavior, director);
+
         }
 
         List<SpawnCandidate> BuildSpawnCandidates(RoomScanResult scanResult, SpawnDiagnostics diagnostics)

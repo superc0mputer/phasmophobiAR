@@ -127,6 +127,7 @@ namespace PhasmophobiAR.Scanning
         bool m_HasCameraPose;
         bool m_IsScanReady;
         bool m_InvestigationStarted;
+        bool m_ScanVisualsVisible = true;
 
         public float Progress => m_Progress;
         public TrackingConfidence Confidence => m_Confidence;
@@ -166,12 +167,26 @@ namespace PhasmophobiAR.Scanning
         {
             if (m_GameStateManager != null)
                 m_GameStateManager.PhaseChanged += OnPhaseChanged;
+
+            if (m_PlaneManager != null)
+                m_PlaneManager.trackablesChanged.AddListener(OnPlanesChanged);
+
+            if (m_PointCloudManager != null)
+                m_PointCloudManager.trackablesChanged.AddListener(OnPointCloudsChanged);
+
+            ApplyScanVisualizationState();
         }
 
         void OnDisable()
         {
             if (m_GameStateManager != null)
                 m_GameStateManager.PhaseChanged -= OnPhaseChanged;
+
+            if (m_PlaneManager != null)
+                m_PlaneManager.trackablesChanged.RemoveListener(OnPlanesChanged);
+
+            if (m_PointCloudManager != null)
+                m_PointCloudManager.trackablesChanged.RemoveListener(OnPointCloudsChanged);
         }
 
         void Update()
@@ -207,12 +222,15 @@ namespace PhasmophobiAR.Scanning
             m_StableSpawnCandidates.Clear();
             SetConfidence(EvaluateTrackingConfidence());
             m_ProgressChanged.Invoke(m_Progress);
+            ApplyScanVisualizationState();
         }
 
         void OnPhaseChanged(GamePhase phase)
         {
             if (phase == GamePhase.RoomScan)
                 RestartScan();
+
+            ApplyScanVisualizationState();
         }
 
         void UpdateTracking(float deltaTime)
@@ -374,9 +392,88 @@ namespace PhasmophobiAR.Scanning
             m_ProgressChanged.Invoke(m_Progress);
             m_RoomScanCompleted.Invoke();
             RoomScanCompleted?.Invoke();
+            ApplyScanVisualizationState();
 
             if (m_GameStateManager != null)
                 m_GameStateManager.CompleteRoomScan(CreateResult());
+        }
+
+        void OnPlanesChanged(ARTrackablesChangedEventArgs<ARPlane> eventArgs)
+        {
+            foreach (var plane in eventArgs.added)
+                ApplyVisibilityToTrackable(plane, m_ScanVisualsVisible);
+
+            foreach (var plane in eventArgs.updated)
+                ApplyVisibilityToTrackable(plane, m_ScanVisualsVisible);
+        }
+
+        void OnPointCloudsChanged(ARTrackablesChangedEventArgs<ARPointCloud> eventArgs)
+        {
+            foreach (var pointCloud in eventArgs.added)
+                ApplyVisibilityToTrackable(pointCloud, m_ScanVisualsVisible);
+
+            foreach (var pointCloud in eventArgs.updated)
+                ApplyVisibilityToTrackable(pointCloud, m_ScanVisualsVisible);
+        }
+
+        void ApplyScanVisualizationState()
+        {
+            var shouldShowVisuals = m_GameStateManager == null || m_GameStateManager.CurrentPhase == GamePhase.RoomScan;
+            m_ScanVisualsVisible = shouldShowVisuals;
+
+            if (m_PlaneManager != null)
+            {
+                foreach (var plane in m_PlaneManager.trackables)
+                    ApplyVisibilityToTrackable(plane, shouldShowVisuals);
+            }
+
+            if (m_PointCloudManager != null)
+            {
+                foreach (var pointCloud in m_PointCloudManager.trackables)
+                    ApplyVisibilityToTrackable(pointCloud, shouldShowVisuals);
+            }
+
+            if (m_MeshManager != null && m_MeshManager.meshes != null)
+            {
+                foreach (var meshFilter in m_MeshManager.meshes)
+                {
+                    if (meshFilter == null)
+                        continue;
+
+                    ApplyVisibilityToObject(meshFilter.gameObject, shouldShowVisuals);
+                }
+            }
+        }
+
+        static void ApplyVisibilityToTrackable(Component trackable, bool visible)
+        {
+            if (trackable == null)
+                return;
+
+            ApplyVisibilityToObject(trackable.gameObject, visible);
+        }
+
+        static void ApplyVisibilityToObject(GameObject target, bool visible)
+        {
+            if (target == null)
+                return;
+
+            var renderers = target.GetComponentsInChildren<Renderer>(true);
+            foreach (var currentRenderer in renderers)
+                currentRenderer.enabled = visible;
+
+            var lineRenderers = target.GetComponentsInChildren<LineRenderer>(true);
+            foreach (var lineRenderer in lineRenderers)
+                lineRenderer.enabled = visible;
+
+            var particleSystems = target.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var particleSystem in particleSystems)
+            {
+                if (visible)
+                    particleSystem.Play(true);
+                else
+                    particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
         }
 
         ScanSnapshot CreateSnapshot()

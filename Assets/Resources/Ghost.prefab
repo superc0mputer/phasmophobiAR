@@ -9,10 +9,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4903535396299180674}
-  - component: {fileID: 7478264458490545037}
-  - component: {fileID: 7653786789812339414}
   - component: {fileID: 1096143833721273602}
   - component: {fileID: -1550357350723196786}
+  - component: {fileID: 683145192037451928}
+  - component: {fileID: 5478500053394186510}
+  - component: {fileID: 9198051253369810548}
+  - component: {fileID: 6832040681264598664}
+  - component: {fileID: 5391865812039957249}
+  - component: {fileID: 2423356136195667367}
   m_Layer: 0
   m_Name: Ghost
   m_TagString: Untagged
@@ -35,63 +39,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &7478264458490545037
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5096882462001060616}
-  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &7653786789812339414
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5096882462001060616}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
 --- !u!136 &1096143833721273602
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -125,7 +72,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5775fba3480cf40a48e2cce5fd8e0202, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.GhostRevealCaptureController
   m_GameStateManager: {fileID: 0}
   m_RoomScanController: {fileID: 0}
@@ -145,3 +92,154 @@ MonoBehaviour:
     captureProgressResetDelaySeconds: 0.4
     captureProgressBonusAtCenter: 0.25
   m_ResultDelaySeconds: 0.4
+  m_UseManifestationWindows: 1
+  m_InitialManifestationDelaySeconds: {x: 7, y: 14}
+  m_ManifestationCooldownSeconds: {x: 20, y: 36}
+  m_ManifestationDurationSeconds: {x: 5, y: 8}
+--- !u!114 &683145192037451928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26a0493e90784317a6807801580aaf69, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.GhostJumpScareController
+  m_FirstScareDelaySeconds: 22
+  m_CooldownRangeSeconds: {x: 38, y: 65}
+  m_MaxScaresPerInvestigation: 5
+  m_MinimumTension: 0.2
+  m_StartDistanceMeters: 1.65
+  m_StopDistanceMeters: 0.48
+  m_RushDurationSeconds: 0.42
+  m_HoldDurationSeconds: 0.16
+  m_DisappearDurationSeconds: 0.12
+  m_VisualScale: 0.62
+  m_JumpScareClip: {fileID: 0}
+  m_Volume: 0.72
+--- !u!114 &5478500053394186510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8c1956cd4544b418dbfc9770c67fd70, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.HorrorDirector
+  m_StartingTension: 0.06
+  m_PassiveTensionPerSecond: 0.0035
+  m_NearGhostTensionPerSecond: 0.007
+  m_CaptureTensionPerSecond: 0.018
+  m_NearGhostDistanceMeters: 2.5
+  m_InitialQuietPeriodSeconds: 6
+  m_EventIntervalAtLowTension: {x: 12, y: 22}
+  m_EventIntervalAtHighTension: {x: 7, y: 12}
+  m_TensionReliefAfterEvent: 0.04
+  m_LogTriggeredEvents: 1
+--- !u!114 &9198051253369810548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd1446242b1f428d99f96984f67a8de6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.PeripheralApparitionEvent
+  m_MinimumTension: 0.05
+  m_SelectionWeight: 1
+  m_CooldownSeconds: 20
+  m_MaxTriggersPerInvestigation: 3
+  m_DistanceRangeMeters: {x: 2, y: 3}
+  m_EdgeViewportPosition: 0.9
+  m_MinimumVisibleSeconds: 0.2
+  m_MaximumVisibleSeconds: 1.6
+  m_VisualScale: 0.28
+  m_Visibility: 0.45
+  m_PlaceholderSound: {fileID: 0}
+  m_Volume: 0.35
+--- !u!114 &6832040681264598664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70dbf479ae5041ec8a2d83f9510b57a4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.FakeCaptureFailureEvent
+  m_MinimumTension: 0.2
+  m_SelectionWeight: 1
+  m_CooldownSeconds: 20
+  m_MaxTriggersPerInvestigation: 3
+  m_MinimumCaptureProgress: 0.5
+  m_MaximumCaptureProgress: 0.9
+  m_FailureDurationSeconds: 0.65
+  m_PlaceholderSignalLossSound: {fileID: 0}
+  m_Volume: 0.45
+--- !u!114 &5391865812039957249
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 475eb3cedead468db963ed306e92fccb, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.EnvironmentalFootstepEvent
+  m_MinimumTension: 0.05
+  m_SelectionWeight: 1.4
+  m_CooldownSeconds: 20
+  m_MaxTriggersPerInvestigation: 3
+  m_StepCountRange: {x: 4, y: 7}
+  m_StepIntervalRangeSeconds: {x: 0.32, y: 0.58}
+  m_StartDistanceRangeMeters: {x: 1.4, y: 2.8}
+  m_StrideMeters: 0.48
+  m_ApproachPlayerChance: 0.65
+  m_RaycastHeightMeters: 1.5
+  m_RaycastDistanceMeters: 4
+  m_FallbackFloorBelowCameraMeters: 1.35
+  m_FootstepClips: []
+  m_Volume: 0.85
+  m_PitchRange: {x: 0.82, y: 1.08}
+  m_SpatialBlend: 0.65
+  m_FootprintColor: {r: 0.62, g: 0.9, b: 1, a: 0.48}
+  m_FootprintSizeMeters: {x: 0.22, y: 0.42}
+  m_FootprintLifetimeSeconds: 8.5
+  m_FootprintFadeSeconds: 3.25
+  m_FootprintHoverHeightMeters: 0.06
+  m_FootprintGlowColor: {r: 0.78, g: 0.98, b: 1, a: 0.18}
+--- !u!114 &2423356136195667367
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5096882462001060616}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7f2de5c4d9d4230ab086a75fd85410c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PhasmophobiAR.Ghosts.CloseBreathingEvent
+  m_MinimumTension: 0.05
+  m_SelectionWeight: 1
+  m_CooldownSeconds: 20
+  m_MaxTriggersPerInvestigation: 3
+  m_DurationRangeSeconds: {x: 2.8, y: 4.8}
+  m_BreathingClip: {fileID: 0}
+  m_Volume: 0.52
+  m_SpatialBlend: 0.05
+  m_StereoPan: 0.48
+  m_PitchRange: {x: 0.88, y: 1.04}
