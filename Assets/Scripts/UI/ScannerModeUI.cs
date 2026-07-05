@@ -1,4 +1,3 @@
-using System;
 using PhasmophobiAR.Game;
 using PhasmophobiAR.Scanning;
 using PhasmophobiAR.Tools;
@@ -317,16 +316,7 @@ namespace PhasmophobiAR.UI
                 return;
             }
 
-            m_SwitchModeButtonLabel.text = $"Next: {GetModeLabel(GetNextMode(m_ScannerModeManager.CurrentMode))}";
-        }
-
-        static ScannerMode GetNextMode(ScannerMode mode)
-        {
-            var nextMode = (int)mode + 1;
-            if (!Enum.IsDefined(typeof(ScannerMode), nextMode))
-                nextMode = 0;
-
-            return (ScannerMode)nextMode;
+            m_SwitchModeButtonLabel.text = "Switch";
         }
 
         static string GetPhaseLabel(GamePhase phase)
