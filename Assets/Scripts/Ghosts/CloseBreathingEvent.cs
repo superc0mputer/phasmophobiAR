@@ -7,7 +7,7 @@ namespace PhasmophobiAR.Ghosts
     public sealed class CloseBreathingEvent : HorrorEvent
     {
         [SerializeField] Vector2 m_DurationRangeSeconds = new Vector2(2.8f, 4.8f);
-        [SerializeField] AudioClip m_BreathingClip;
+        [SerializeField] AudioClip[] m_BreathingClips;
         [SerializeField, Range(0f, 1f)] float m_Volume = 0.52f;
         [SerializeField, Range(0f, 1f)] float m_SpatialBlend = 0.05f;
         [SerializeField, Range(0f, 1f)] float m_StereoPan = 0.48f;
@@ -31,7 +31,7 @@ namespace PhasmophobiAR.Ghosts
             source.panStereo = Mathf.Sign(m_AudioObject.transform.localPosition.x) * m_StereoPan;
             source.pitch = Random.Range(Mathf.Min(m_PitchRange.x, m_PitchRange.y), Mathf.Max(m_PitchRange.x, m_PitchRange.y));
             source.volume = m_Volume;
-            source.clip = m_BreathingClip != null ? m_BreathingClip : GetPlaceholder();
+            source.clip = GetRandomClip() ?? GetPlaceholder();
             source.Play();
 
             var duration = Random.Range(Mathf.Min(m_DurationRangeSeconds.x, m_DurationRangeSeconds.y), Mathf.Max(m_DurationRangeSeconds.x, m_DurationRangeSeconds.y));
@@ -45,6 +45,18 @@ namespace PhasmophobiAR.Ghosts
         {
             m_GeneratedPlaceholder ??= CreatePlaceholderBreathing();
             return m_GeneratedPlaceholder;
+        }
+
+        AudioClip GetRandomClip()
+        {
+            if (m_BreathingClips == null || m_BreathingClips.Length == 0) return null;
+            var start = Random.Range(0, m_BreathingClips.Length);
+            for (var offset = 0; offset < m_BreathingClips.Length; offset++)
+            {
+                var clip = m_BreathingClips[(start + offset) % m_BreathingClips.Length];
+                if (clip != null) return clip;
+            }
+            return null;
         }
 
         static AudioClip CreatePlaceholderBreathing()

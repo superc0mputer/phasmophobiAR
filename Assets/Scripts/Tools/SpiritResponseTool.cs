@@ -53,6 +53,16 @@ namespace PhasmophobiAR.Tools
             "COME CLOSER"
         };
 
+        [Header("Voice")]
+        [SerializeField]
+        bool m_SpeakResponses = true;
+
+        [SerializeField, Range(0.5f, 2f)]
+        float m_VoiceRate = 0.82f;
+
+        [SerializeField, Range(0.5f, 2f)]
+        float m_VoicePitch = 0.72f;
+
         [Header("Overlay UI")]
         [SerializeField]
         TMP_Text m_ResponseText;
@@ -103,6 +113,8 @@ namespace PhasmophobiAR.Tools
         {
             if (m_EvidenceRegistry != null)
                 m_EvidenceRegistry.EvidenceCleared -= OnEvidenceCleared;
+
+            SpiritTextToSpeech.Stop();
         }
 
         void Update()
@@ -142,7 +154,10 @@ namespace PhasmophobiAR.Tools
                 return;
             }
 
-            SetResponse(GetGhostPhrase());
+            var response = GetGhostPhrase();
+            SetResponse(response);
+            if (m_SpeakResponses)
+                SpiritTextToSpeech.Speak(response, m_VoiceRate, m_VoicePitch);
             TryRecordSpiritResponseEvidence();
         }
 

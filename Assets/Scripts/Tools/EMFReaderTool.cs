@@ -64,24 +64,9 @@ namespace PhasmophobiAR.Tools
         [SerializeField]
         float m_RuntimeHologramScale = 0.65f;
 
-        [Header("Audio")]
-        [SerializeField]
-        AudioSource m_AudioSource;
-
-        [SerializeField]
-        float m_MinBeepIntervalSeconds = 0.12f;
-
-        [SerializeField]
-        float m_MaxBeepIntervalSeconds = 1.2f;
-
-        [SerializeField]
-        float m_BeepVolume = 0.35f;
-
         float m_CurrentSignal;
         int m_CurrentLevel;
-        float m_NextBeepTime;
         Vector3 m_AuthoredHologramScale = Vector3.one;
-        AudioClip m_BeepClip;
         bool m_HasRecordedSpike;
 
         public float CurrentSignal => m_CurrentSignal;
@@ -105,7 +90,6 @@ namespace PhasmophobiAR.Tools
 
             EnsureModel();
             ApplyRuntimeHologramScale();
-            EnsureAudio();
             EnsureCollider();
             UpdateFeedback(0f, 0);
         }
@@ -125,7 +109,6 @@ namespace PhasmophobiAR.Tools
                 false);
 
             SetSignal(signal);
-            TickAudio();
             TryRecordSpikeEvidence();
         }
 
@@ -162,20 +145,6 @@ namespace PhasmophobiAR.Tools
             }
 
             m_EvidenceRegistry.RecordEvidence(EvidenceType.EMFSpike);
-        }
-
-        void TickAudio()
-        {
-            if (m_AudioSource == null || m_BeepClip == null || m_CurrentLevel <= 0)
-                return;
-
-            if (Time.time < m_NextBeepTime)
-                return;
-
-            var interval = Mathf.Lerp(m_MaxBeepIntervalSeconds, m_MinBeepIntervalSeconds, m_CurrentSignal);
-            m_AudioSource.pitch = Mathf.Lerp(0.85f, 1.75f, m_CurrentSignal);
-            m_AudioSource.PlayOneShot(m_BeepClip, Mathf.Lerp(0.12f, m_BeepVolume, m_CurrentSignal));
-            m_NextBeepTime = Time.time + interval;
         }
 
         void UpdateFeedback(float signal, int level)
@@ -303,51 +272,11 @@ namespace PhasmophobiAR.Tools
             }
         }
 
-        void EnsureAudio()
-        {
-            if (m_AudioSource == null)
-            {
-                m_AudioSource = GetComponent<AudioSource>();
-                if (m_AudioSource == null)
-                {
-                    Debug.LogError("EMFReaderTool requires a pre-authored AudioSource.", this);
-                    return;
-                }
-            }
-
-            m_AudioSource.playOnAwake = false;
-            m_AudioSource.spatialBlend = 1f;
-            m_AudioSource.rolloffMode = AudioRolloffMode.Linear;
-            m_AudioSource.minDistance = 0.15f;
-            m_AudioSource.maxDistance = 4f;
-            m_BeepClip = CreateBeepClip();
-        }
-
         void EnsureCollider()
         {
             if (GetComponent<Collider>() != null)
                 return;
             Debug.LogError("EMFReaderTool requires a pre-authored Collider.", this);
-        }
-
-        static AudioClip CreateBeepClip()
-        {
-            const int sampleRate = 22050;
-            const float duration = 0.055f;
-            const float frequency = 1200f;
-
-            var sampleCount = Mathf.CeilToInt(sampleRate * duration);
-            var samples = new float[sampleCount];
-            for (var i = 0; i < samples.Length; i++)
-            {
-                var t = i / (float)sampleRate;
-                var envelope = Mathf.Clamp01(1f - t / duration);
-                samples[i] = Mathf.Sin(2f * Mathf.PI * frequency * t) * envelope;
-            }
-
-            var clip = AudioClip.Create("EMF Beep", sampleCount, 1, sampleRate, false);
-            clip.SetData(samples, 0);
-            return clip;
         }
 
         static Color LevelColor(int level)
