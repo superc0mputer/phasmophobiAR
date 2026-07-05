@@ -4068,10 +4068,6 @@ MonoBehaviour:
   m_HologramValueText: {fileID: 2486429459096064890}
   m_HologramPointer: {fileID: 1902182061082443664}
   m_RuntimeHologramScale: 0.65
-  m_AudioSource: {fileID: 7323880944064285788}
-  m_MinBeepIntervalSeconds: 0.12
-  m_MaxBeepIntervalSeconds: 1.2
-  m_BeepVolume: 0.35
 --- !u!1 &6919243413543532099
 GameObject:
   m_ObjectHideFlags: 0

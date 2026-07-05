@@ -190,7 +190,7 @@ MonoBehaviour:
   m_MinimumCaptureProgress: 0.5
   m_MaximumCaptureProgress: 0.9
   m_FailureDurationSeconds: 0.65
-  m_PlaceholderSignalLossSound: {fileID: 0}
+  m_PlaceholderSignalLossSound: {fileID: 8300000, guid: bd377e40d82ad408c9f7b899777ea324, type: 3}
   m_Volume: 0.45
 --- !u!114 &5391865812039957249
 MonoBehaviour:

@@ -69,6 +69,9 @@ MonoBehaviour:
   - LISTEN
   - IN THE DARK
   - COME CLOSER
+  m_SpeakResponses: 1
+  m_VoiceRate: 0.82
+  m_VoicePitch: 0.72
   m_ResponseText: {fileID: 4343542816220867276}
 --- !u!65 &100002
 BoxCollider:
