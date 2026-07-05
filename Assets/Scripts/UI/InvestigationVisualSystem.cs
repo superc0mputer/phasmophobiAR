@@ -59,6 +59,65 @@ namespace PhasmophobiAR.UI
                 Debug.LogError("InvestigationVisualSystem requires the scene-authored Investigation Visual Rig. Author it from Tools/PhasmophobiAR/Author Investigation Visual Rig.", this);
                 enabled = false;
             }
+
+            ConfigureHUDLayout();
+        }
+
+        void ConfigureHUDLayout()
+        {
+            if (m_Panel != null)
+            {
+                m_Panel.anchorMin = m_Panel.anchorMax = Vector2.zero;
+                m_Panel.pivot = Vector2.zero;
+                m_Panel.anchoredPosition = new Vector2(18f, 18f);
+                m_Panel.sizeDelta = new Vector2(292f, 108f);
+            }
+
+            if (m_PanelGroup != null)
+            {
+                m_PanelGroup.interactable = false;
+                m_PanelGroup.blocksRaycasts = false;
+            }
+
+            PositionText(m_Title, new Vector2(32f, 99f), new Vector2(210f, 20f), 12f);
+            PositionText(m_Readout, new Vector2(32f, 50f), new Vector2(190f, 38f), 27f);
+            PositionText(m_Status, new Vector2(32f, 28f), new Vector2(200f, 18f), 10f);
+
+            var switchObject = GameObject.Find("Switch Mode Button");
+            if (switchObject != null && switchObject.transform is RectTransform switchRect)
+            {
+                switchRect.anchorMin = switchRect.anchorMax = Vector2.zero;
+                switchRect.pivot = Vector2.zero;
+                switchRect.anchoredPosition = new Vector2(222f, 28f);
+                switchRect.sizeDelta = new Vector2(78f, 30f);
+                var label = switchObject.GetComponentInChildren<TMP_Text>(true);
+                if (label != null) label.fontSizeMax = 11f;
+            }
+
+            var journalObject = GameObject.Find("Open Journal Button");
+            if (journalObject != null && journalObject.transform is RectTransform journalRect)
+            {
+                journalRect.anchorMin = journalRect.anchorMax = Vector2.one;
+                journalRect.pivot = Vector2.one;
+                journalRect.anchoredPosition = new Vector2(-18f, -18f);
+                journalRect.sizeDelta = new Vector2(86f, 34f);
+                var label = journalObject.GetComponentInChildren<TMP_Text>(true);
+                if (label != null) label.fontSize = 13f;
+            }
+        }
+
+        static void PositionText(TMP_Text text, Vector2 position, Vector2 size, float fontSize)
+        {
+            if (text == null || text.rectTransform == null) return;
+            var rect = text.rectTransform;
+            rect.anchorMin = rect.anchorMax = Vector2.zero;
+            rect.pivot = Vector2.zero;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            text.fontSize = fontSize;
+            text.enableAutoSizing = false;
+            text.alignment = TextAlignmentOptions.Left;
+            text.raycastTarget = false;
         }
 
         void OnEnable()
@@ -90,7 +149,7 @@ namespace PhasmophobiAR.UI
             ResolveTools();
             m_Transition = Mathf.MoveTowards(m_Transition, 1f, Time.unscaledDeltaTime / Mathf.Max(.05f, m_TransitionSeconds));
             var eased = 1f - Mathf.Pow(1f - m_Transition, 3f);
-            m_Panel.anchoredPosition = new Vector2(Mathf.Lerp(-38f, 26f, eased), 28f);
+            m_Panel.anchoredPosition = new Vector2(Mathf.Lerp(-32f, 18f, eased), 18f);
             m_Panel.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(-2.5f, 0f, eased));
             UpdateReadout();
             var analogFlicker = .96f + Mathf.PerlinNoise(Time.unscaledTime * 12f, 3.7f) * .04f;
