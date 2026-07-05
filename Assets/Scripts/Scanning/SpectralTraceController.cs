@@ -9,7 +9,7 @@ using TMPro;
 namespace PhasmophobiAR.Scanning
 {
     /// <summary>
-    /// Spawns transient spectral traces near hidden ghosts while in Spectral scanner mode.
+    /// Reuses scene-authored spectral traces near hidden ghosts while in Spectral scanner mode.
     /// Traces are more likely and more visible when tracking confidence is higher.
     /// </summary>
     public sealed class SpectralTraceController : MonoBehaviour
@@ -32,6 +32,9 @@ namespace PhasmophobiAR.Scanning
         [SerializeField]
         TMP_Text m_TracesText;
 
+        [SerializeField]
+        GameObject[] m_SceneTraces;
+
         [Header("Tuning")]
         [SerializeField]
         float m_MaxDistance = 6f;
@@ -51,6 +54,7 @@ namespace PhasmophobiAR.Scanning
         readonly Dictionary<Transform, float> m_LastTraceTime = new Dictionary<Transform, float>();
         readonly List<GameObject> m_ActiveTraces = new List<GameObject>();
         bool m_HasRecordedSpectralTrace;
+        int m_NextTraceIndex;
 
         void Awake()
         {
@@ -68,6 +72,10 @@ namespace PhasmophobiAR.Scanning
 
             if (m_ARCamera == null && Camera.main != null)
                 m_ARCamera = Camera.main;
+
+            if (m_SceneTraces != null)
+                foreach (var trace in m_SceneTraces)
+                    if (trace != null) trace.SetActive(false);
         }
 
         public void Configure(
@@ -188,7 +196,27 @@ namespace PhasmophobiAR.Scanning
 
         void SpawnTrace(Vector3 position, float spectralMultiplier)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            if (m_SceneTraces == null || m_SceneTraces.Length == 0)
+            {
+                Debug.LogError("SpectralTraceController requires a scene-authored trace pool.", this);
+                return;
+            }
+
+            GameObject go = null;
+            for (var i = 0; i < m_SceneTraces.Length; i++)
+            {
+                var index = (m_NextTraceIndex + i) % m_SceneTraces.Length;
+                if (m_SceneTraces[index] != null && !m_SceneTraces[index].activeSelf)
+                {
+                    go = m_SceneTraces[index];
+                    m_NextTraceIndex = (index + 1) % m_SceneTraces.Length;
+                    break;
+                }
+            }
+
+            if (go == null)
+                return;
+
             go.transform.position = position;
             go.transform.localScale = Vector3.one * Mathf.Lerp(0.06f, 0.12f, Mathf.Clamp01((spectralMultiplier - 0.5f) / 1.5f));
             go.transform.SetParent(transform, true);
@@ -203,6 +231,7 @@ namespace PhasmophobiAR.Scanning
             }
 
             m_ActiveTraces.Add(go);
+            go.SetActive(true);
             TryRecordSpectralTraceEvidence();
             StartCoroutine(FadeAndDestroy(go, m_TraceLifetimeSeconds));
         }
@@ -248,14 +277,14 @@ namespace PhasmophobiAR.Scanning
             }
 
             m_ActiveTraces.Remove(go);
-            Destroy(go);
+            go.SetActive(false);
             UpdateTracesText();
         }
 
         void ClearAllTraces()
         {
             foreach (var go in m_ActiveTraces)
-                if (go != null) Destroy(go);
+                if (go != null) go.SetActive(false);
             m_ActiveTraces.Clear();
             UpdateTracesText();
         }

@@ -63,6 +63,14 @@ namespace PhasmophobiAR.Tools
         string m_CurrentResponse;
 
         public string CurrentResponse => string.IsNullOrEmpty(m_CurrentResponse) ? m_IdleText : m_CurrentResponse;
+        public event System.Action<string> ResponseChanged;
+
+        /// <summary>Hides the prefab's old floating response text while preserving response detection.</summary>
+        public void SetLegacyVisualsVisible(bool visible)
+        {
+            if (m_ResponseText != null)
+                m_ResponseText.gameObject.SetActive(visible);
+        }
 
         void Awake()
         {
@@ -201,16 +209,17 @@ namespace PhasmophobiAR.Tools
             if (GetComponent<Collider>() != null)
                 return;
 
-            var box = gameObject.AddComponent<BoxCollider>();
-            box.center = new Vector3(0f, 0.04f, 0f);
-            box.size = new Vector3(0.12f, 0.08f, 0.14f);
+            Debug.LogError("SpiritResponseTool requires a pre-authored Collider.", this);
         }
 
         void SetResponse(string response)
         {
+            if (m_CurrentResponse == response)
+                return;
             m_CurrentResponse = response;
             if (m_ResponseText != null)
                 m_ResponseText.text = response;
+            ResponseChanged?.Invoke(response);
         }
     }
 }

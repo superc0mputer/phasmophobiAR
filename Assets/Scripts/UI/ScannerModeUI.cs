@@ -1,4 +1,3 @@
-using System;
 using PhasmophobiAR.Game;
 using PhasmophobiAR.Scanning;
 using PhasmophobiAR.Tools;
@@ -48,6 +47,22 @@ namespace PhasmophobiAR.UI
 
         [SerializeField]
         SpiritResponseTool m_SpiritResponseTool;
+
+        bool m_LegacyLabelsVisible = true;
+
+        /// <summary>The enhanced camera surface replaces these two legacy labels, not the mode button.</summary>
+        public void SetLegacyLabelsVisible(bool visible)
+        {
+            m_LegacyLabelsVisible = visible;
+            // Enhanced mode deliberately reuses these original scene objects.
+            // False relinquishes text ownership without hiding the controls.
+            if (!visible)
+            {
+                if (m_CurrentModeText != null) m_CurrentModeText.gameObject.SetActive(true);
+                if (m_ModeReadoutText != null) m_ModeReadoutText.gameObject.SetActive(true);
+                if (m_SwitchModeButton != null) m_SwitchModeButton.gameObject.SetActive(true);
+            }
+        }
 
         public void Configure(ScannerModeManager scannerModeManager, GameStateManager gameStateManager, Button switchModeButton, TMP_Text currentModeText)
         {
@@ -183,7 +198,7 @@ namespace PhasmophobiAR.UI
             if (m_CurrentPhaseText != null)
                 m_CurrentPhaseText.text = GetPhaseLabel(currentPhase);
 
-            if (m_CurrentModeText != null)
+            if (m_CurrentModeText != null && m_ScannerModeManager != null && m_LegacyLabelsVisible)
             {
                 if (m_ScannerModeManager != null && isInvestigation)
                     m_CurrentModeText.text = $"MODE: {GetModeLabel(m_ScannerModeManager.CurrentMode)}";
@@ -198,6 +213,9 @@ namespace PhasmophobiAR.UI
         void UpdateReadout()
         {
             if (m_ModeReadoutText == null)
+                return;
+
+            if (!m_LegacyLabelsVisible)
                 return;
 
             var isInvestigation = m_GameStateManager != null && m_GameStateManager.CurrentPhase == GamePhase.Investigation;
@@ -232,7 +250,7 @@ namespace PhasmophobiAR.UI
                     }
                     break;
                 case ScannerMode.Spectral:
-                    m_ModeReadoutText.text = "SPECTRAL";
+                    m_ModeReadoutText.text = "GHOST ORBS";
                     m_ModeReadoutText.color = new Color(0.65f, 0.9f, 1f, 1f);
                     break;
                 case ScannerMode.SpiritResponse:
@@ -298,16 +316,7 @@ namespace PhasmophobiAR.UI
                 return;
             }
 
-            m_SwitchModeButtonLabel.text = $"Next: {GetModeLabel(GetNextMode(m_ScannerModeManager.CurrentMode))}";
-        }
-
-        static ScannerMode GetNextMode(ScannerMode mode)
-        {
-            var nextMode = (int)mode + 1;
-            if (!Enum.IsDefined(typeof(ScannerMode), nextMode))
-                nextMode = 0;
-
-            return (ScannerMode)nextMode;
+            m_SwitchModeButtonLabel.text = "Switch";
         }
 
         static string GetPhaseLabel(GamePhase phase)
@@ -336,7 +345,7 @@ namespace PhasmophobiAR.UI
                 case ScannerMode.Thermal:
                     return "TEMP";
                 case ScannerMode.Spectral:
-                    return "Spectral";
+                    return "Orbs";
                 case ScannerMode.SpiritResponse:
                     return "Spirit";
                 default:

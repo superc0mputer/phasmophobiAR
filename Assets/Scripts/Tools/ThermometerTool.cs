@@ -71,7 +71,15 @@ namespace PhasmophobiAR.Tools
         bool m_HasRecordedFreezing;
 
         public float CurrentCelsius => m_CurrentCelsius;
+        public bool IsFreezing => m_CurrentCelsius <= m_FreezingEvidenceThresholdCelsius;
         public bool HasRecordedFreezing => m_HasRecordedFreezing;
+
+        /// <summary>Hides only the old holographic gauge; sensing and the physical device remain active.</summary>
+        public void SetLegacyVisualsVisible(bool visible)
+        {
+            if (m_HologramRoot != null)
+                m_HologramRoot.gameObject.SetActive(visible);
+        }
 
         void Awake()
         {
@@ -200,7 +208,10 @@ namespace PhasmophobiAR.Tools
             {
                 m_AudioSource = GetComponent<AudioSource>();
                 if (m_AudioSource == null)
-                    m_AudioSource = gameObject.AddComponent<AudioSource>();
+                {
+                    Debug.LogError("ThermometerTool requires a pre-authored AudioSource.", this);
+                    return;
+                }
             }
 
             m_AudioSource.playOnAwake = false;
@@ -215,9 +226,7 @@ namespace PhasmophobiAR.Tools
             if (GetComponent<Collider>() != null)
                 return;
 
-            var box = gameObject.AddComponent<BoxCollider>();
-            box.center = new Vector3(0f, 0.04f, 0f);
-            box.size = new Vector3(0.08f, 0.06f, 0.18f);
+            Debug.LogError("ThermometerTool requires a pre-authored Collider.", this);
         }
 
         static Color TemperatureColor(float coldAmount)

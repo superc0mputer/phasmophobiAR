@@ -88,6 +88,13 @@ namespace PhasmophobiAR.Tools
         public int CurrentLevel => m_CurrentLevel;
         public bool HasRecordedSpike => m_HasRecordedSpike;
 
+        /// <summary>Allows the unified camera UI to replace the oversized legacy hologram without disabling the tool.</summary>
+        public void SetLegacyVisualsVisible(bool visible)
+        {
+            if (m_HologramRoot != null)
+                m_HologramRoot.gameObject.SetActive(visible);
+        }
+
         void Awake()
         {
             if (m_GameStateManager == null)
@@ -199,20 +206,7 @@ namespace PhasmophobiAR.Tools
 
         void EnsureModel()
         {
-            if (transform.Find("EMF Model") != null)
-                return;
-
-            var modelPrefab = Resources.Load<GameObject>(m_ModelResourcePath);
-            if (modelPrefab == null)
-                return;
-
-            var model = Instantiate(modelPrefab, transform);
-            model.name = "EMF Model";
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
-            model.transform.localScale = m_ModelLocalScale;
-            KeepConfiguredModelVariant(model.transform);
-            ApplyModelTextures(model.transform);
+            // Visuals are authored directly into the prefab/scene. Runtime model creation is disabled.
         }
 
         void KeepConfiguredModelVariant(Transform modelRoot)
@@ -315,7 +309,10 @@ namespace PhasmophobiAR.Tools
             {
                 m_AudioSource = GetComponent<AudioSource>();
                 if (m_AudioSource == null)
-                    m_AudioSource = gameObject.AddComponent<AudioSource>();
+                {
+                    Debug.LogError("EMFReaderTool requires a pre-authored AudioSource.", this);
+                    return;
+                }
             }
 
             m_AudioSource.playOnAwake = false;
@@ -330,10 +327,7 @@ namespace PhasmophobiAR.Tools
         {
             if (GetComponent<Collider>() != null)
                 return;
-
-            var box = gameObject.AddComponent<BoxCollider>();
-            box.center = new Vector3(0f, 0.025f, 0f);
-            box.size = new Vector3(0.12f, 0.05f, 0.18f);
+            Debug.LogError("EMFReaderTool requires a pre-authored Collider.", this);
         }
 
         static AudioClip CreateBeepClip()

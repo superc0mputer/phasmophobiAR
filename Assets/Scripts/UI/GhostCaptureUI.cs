@@ -32,6 +32,7 @@ namespace PhasmophobiAR.UI
         {
             if (m_GameStateManager == null)
                 m_GameStateManager = GameStateManager.Instance;
+
         }
 
         void OnEnable()
@@ -129,7 +130,7 @@ namespace PhasmophobiAR.UI
             if (m_CaptureProgressText != null)
             {
                 m_CaptureProgressText.gameObject.SetActive(true);
-                m_CaptureProgressText.text = $"Capture: {Mathf.RoundToInt(progress * 100f)}%";
+                m_CaptureProgressText.text = $"{Mathf.RoundToInt(progress * 100f)}%";
             }
 
             if (m_CaptureStateText != null)
