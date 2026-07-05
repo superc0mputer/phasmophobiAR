@@ -157,16 +157,14 @@ namespace PhasmophobiAR.Ghosts
             if (renderer == null)
                 return;
 
+            // Keep the visual prefab's authored base color/albedo intact. Reveal state is
+            // represented by emission only; changing _BaseColor here washes out textures.
             var material = renderer.material;
-            if (material.HasProperty("_BaseColor"))
-                material.SetColor("_BaseColor", color);
-            else if (material.HasProperty("_Color"))
-                material.SetColor("_Color", color);
-
             if (material.HasProperty("_EmissionColor"))
             {
                 material.EnableKeyword("_EMISSION");
-                material.SetColor("_EmissionColor", color * 1.5f);
+                var emissionStrength = color.a * 0.65f;
+                material.SetColor("_EmissionColor", new Color(color.r, color.g, color.b, 1f) * emissionStrength);
             }
         }
 
