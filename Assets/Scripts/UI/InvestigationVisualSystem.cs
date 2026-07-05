@@ -191,15 +191,16 @@ namespace PhasmophobiAR.UI
             m_Thermometer ??= FindAnyObjectByType<ThermometerTool>();
             m_Spirit ??= FindAnyObjectByType<SpiritResponseTool>();
             m_ColdBreath?.SetThermometer(m_Thermometer);
-            // Marker tools can spawn after the presentation rig, so rescan occasionally rather than only at startup.
+            // Marker tools can spawn after the presentation rig. Keep their prefab visuals visible;
+            // the camera HUD supplements the physical tools instead of replacing them.
             if (Time.unscaledTime < m_NextLegacySuppressionScan) return;
             m_NextLegacySuppressionScan = Time.unscaledTime + .75f;
             foreach (var emfTool in FindObjectsByType<EMFReaderTool>(FindObjectsSortMode.None))
-                emfTool.SetLegacyVisualsVisible(false);
+                emfTool.SetLegacyVisualsVisible(true);
             foreach (var thermometer in FindObjectsByType<ThermometerTool>(FindObjectsSortMode.None))
-                thermometer.SetLegacyVisualsVisible(false);
+                thermometer.SetLegacyVisualsVisible(true);
             foreach (var spirit in FindObjectsByType<SpiritResponseTool>(FindObjectsSortMode.None))
-                spirit.SetLegacyVisualsVisible(false);
+                spirit.SetLegacyVisualsVisible(true);
         }
 
         static string ModeName(ScannerMode mode) => mode switch

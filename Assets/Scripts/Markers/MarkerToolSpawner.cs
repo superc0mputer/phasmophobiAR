@@ -23,11 +23,6 @@ namespace PhasmophobiAR.Markers
         [SerializeField]
         TMP_Text m_StatusText;
 
-        [Header("Scene-authored tools (never instantiated at runtime)")]
-        [SerializeField] GameObject m_EMFTool;
-        [SerializeField] GameObject m_ThermometerTool;
-        [SerializeField] GameObject m_SpiritResponseTool;
-
         readonly Dictionary<string, MarkerToolDefinition> m_DefinitionsByMarkerName = new Dictionary<string, MarkerToolDefinition>();
         readonly Dictionary<Guid, MarkerToolDefinition> m_DefinitionsByTextureGuid = new Dictionary<Guid, MarkerToolDefinition>();
         readonly Dictionary<string, GameObject> m_SpawnedToolsByMarkerName = new Dictionary<string, GameObject>();
@@ -51,9 +46,6 @@ namespace PhasmophobiAR.Markers
             m_ToolDefinitions = HasDefinitions(toolDefinitions) ? toolDefinitions : MarkerToolDefaults.CreateDefinitions();
             m_StatusText = statusText ?? m_StatusText;
             RebuildDefinitionLookup();
-            RegisterSceneTool(MarkerToolType.EMFReader, m_EMFTool);
-            RegisterSceneTool(MarkerToolType.Thermometer, m_ThermometerTool);
-            RegisterSceneTool(MarkerToolType.SpiritResponse, m_SpiritResponseTool);
         }
 
         void Awake()
@@ -157,18 +149,16 @@ namespace PhasmophobiAR.Markers
 
             if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool) || tool == null)
             {
-                tool = GetSceneTool(definition.ToolType);
+                tool = SpawnTool(definition, trackedImage.transform);
                 if (tool == null)
                 {
-                    Debug.LogError($"No scene-authored {definition.DisplayName} is assigned. Runtime tool creation is disabled.", this);
-                    SetStatus($"{definition.DisplayName} is missing from the scene.");
+                    Debug.LogError($"No prefab is assigned for {definition.DisplayName}.", this);
+                    SetStatus($"{definition.DisplayName} prefab is missing.");
                     return;
                 }
 
                 m_SpawnedToolsByMarkerName[markerName] = tool;
-                AttachToMarker(tool.transform, trackedImage.transform);
-                tool.SetActive(true);
-                Debug.Log($"Activated scene {definition.DisplayName} for marker '{markerName}'.");
+                Debug.Log($"Spawned {definition.DisplayName} for marker '{markerName}'.");
                 SetStatus($"{definition.DisplayName} tracking.");
             }
             else
@@ -180,25 +170,17 @@ namespace PhasmophobiAR.Markers
             }
         }
 
-        void RegisterSceneTool(MarkerToolType type, GameObject tool)
+        static GameObject SpawnTool(MarkerToolDefinition definition, Transform markerTransform)
         {
-            if (tool == null)
-                return;
+            if (definition.ToolPrefab == null)
+                return null;
 
-            tool.SetActive(false);
-            foreach (var definition in m_ToolDefinitions)
-                if (definition != null && definition.ToolType == type)
-                    m_SpawnedToolsByMarkerName[definition.MarkerName] = tool;
-        }
-
-        GameObject GetSceneTool(MarkerToolType type)
-        {
-            switch (type)
-            {
-                case MarkerToolType.Thermometer: return m_ThermometerTool;
-                case MarkerToolType.SpiritResponse: return m_SpiritResponseTool;
-                default: return m_EMFTool;
-            }
+            var tool = Instantiate(definition.ToolPrefab, markerTransform);
+            tool.name = $"{definition.DisplayName} Tool";
+            tool.transform.localPosition = Vector3.zero;
+            tool.transform.localRotation = Quaternion.identity;
+            tool.SetActive(true);
+            return tool;
         }
 
         static void AttachToMarker(Transform toolTransform, Transform markerTransform)
@@ -216,8 +198,9 @@ namespace PhasmophobiAR.Markers
             if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool))
                 return;
 
+            m_SpawnedToolsByMarkerName.Remove(markerName);
             if (tool != null)
-                tool.SetActive(false);
+                Destroy(tool);
         }
 
         void RebuildDefinitionLookup()
