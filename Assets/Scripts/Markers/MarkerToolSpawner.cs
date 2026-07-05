@@ -142,8 +142,9 @@ namespace PhasmophobiAR.Markers
 
             if (trackedImage.trackingState != TrackingState.Tracking)
             {
-                Debug.Log($"Tool marker '{markerName}' is not currently tracking. Waiting for full tracking before attaching the tool.");
-                SetStatus($"Hold the {definition.DisplayName} card steady.");
+                Debug.Log($"Tool marker '{markerName}' is not currently tracking. Removing any attached tool until the marker is visible again.");
+                RemoveTool(markerName);
+                SetStatus($"Show the {definition.DisplayName} card to place it.");
                 return;
             }
 
