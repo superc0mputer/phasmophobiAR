@@ -10,17 +10,18 @@ namespace PhasmophobiAR.Ghosts
     public sealed class HorrorDirector : MonoBehaviour
     {
         [Header("Hidden tension")]
-        [SerializeField, Range(0f, 1f)] float m_StartingTension = 0.08f;
+        [SerializeField, Range(0f, 1f)] float m_StartingTension = 0.06f;
         [SerializeField, Min(0f)] float m_PassiveTensionPerSecond = 0.0035f;
         [SerializeField, Min(0f)] float m_NearGhostTensionPerSecond = 0.007f;
         [SerializeField, Min(0f)] float m_CaptureTensionPerSecond = 0.018f;
         [SerializeField] float m_NearGhostDistanceMeters = 2.5f;
 
         [Header("Pacing")]
-        [SerializeField] float m_InitialQuietPeriodSeconds = 14f;
-        [SerializeField] Vector2 m_EventIntervalAtLowTension = new Vector2(28f, 45f);
-        [SerializeField] Vector2 m_EventIntervalAtHighTension = new Vector2(10f, 19f);
-        [SerializeField, Range(0f, 1f)] float m_TensionReliefAfterEvent = 0.08f;
+        [SerializeField] float m_InitialQuietPeriodSeconds = 6f;
+        [SerializeField] Vector2 m_EventIntervalAtLowTension = new Vector2(12f, 22f);
+        [SerializeField] Vector2 m_EventIntervalAtHighTension = new Vector2(7f, 12f);
+        [SerializeField, Range(0f, 1f)] float m_TensionReliefAfterEvent = 0.04f;
+        [SerializeField] bool m_LogTriggeredEvents = true;
 
         readonly List<HorrorEvent> m_Events = new List<HorrorEvent>();
         GameStateManager m_GameState;
@@ -135,6 +136,8 @@ namespace PhasmophobiAR.Ghosts
         IEnumerator PlayEvent(HorrorEvent horrorEvent)
         {
             m_IsPlayingEvent = true;
+            if (m_LogTriggeredEvents)
+                Debug.Log($"Horror event: {horrorEvent.GetType().Name} (tension {Tension:0.00})", horrorEvent);
             yield return horrorEvent.Trigger(this);
             Tension = Mathf.Clamp01(Tension - m_TensionReliefAfterEvent);
             ScheduleNextEvent();

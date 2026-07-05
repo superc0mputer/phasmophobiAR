@@ -6,12 +6,12 @@ namespace PhasmophobiAR.Ghosts
     /// <summary>Places a transient ghost at the edge of the AR view; noticing it makes it vanish.</summary>
     public sealed class PeripheralApparitionEvent : HorrorEvent
     {
-        [SerializeField] Vector2 m_DistanceRangeMeters = new Vector2(2.4f, 3.5f);
-        [SerializeField] float m_EdgeViewportPosition = 0.94f;
+        [SerializeField] Vector2 m_DistanceRangeMeters = new Vector2(2f, 3f);
+        [SerializeField] float m_EdgeViewportPosition = 0.9f;
         [SerializeField] float m_MinimumVisibleSeconds = 0.2f;
-        [SerializeField] float m_MaximumVisibleSeconds = 1.2f;
-        [SerializeField] float m_VisualScale = 0.22f;
-        [SerializeField, Range(0f, 1f)] float m_Visibility = 0.32f;
+        [SerializeField] float m_MaximumVisibleSeconds = 1.6f;
+        [SerializeField] float m_VisualScale = 0.28f;
+        [SerializeField, Range(0f, 1f)] float m_Visibility = 0.45f;
         [SerializeField] AudioClip m_PlaceholderSound;
         [SerializeField, Range(0f, 1f)] float m_Volume = 0.35f;
 

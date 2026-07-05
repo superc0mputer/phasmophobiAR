@@ -12,6 +12,7 @@ namespace PhasmophobiAR.Ghosts
         [SerializeField] float m_FirstScareDelaySeconds = 22f;
         [SerializeField] Vector2 m_CooldownRangeSeconds = new Vector2(38f, 65f);
         [SerializeField, Range(0, 10)] int m_MaxScaresPerInvestigation = 5;
+        [SerializeField, Range(0f, 1f)] float m_MinimumTension = 0.2f;
 
         [Header("Presentation")]
         [SerializeField] float m_StartDistanceMeters = 1.65f;
@@ -74,7 +75,7 @@ namespace PhasmophobiAR.Ghosts
         bool CanArmScare()
         {
             if (s_IsAnyScarePlaying || m_ScareCount >= m_MaxScaresPerInvestigation) return false;
-            if (m_HorrorDirector != null && m_HorrorDirector.IsPlayingEvent) return false;
+            if (m_HorrorDirector == null || m_HorrorDirector.IsPlayingEvent || m_HorrorDirector.Tension < m_MinimumTension) return false;
             if (m_GameState != null && m_GameState.CurrentPhase != GamePhase.Investigation) return false;
             return m_GhostBehavior == null || m_GhostBehavior.RevealState != GhostRevealState.Captured;
         }

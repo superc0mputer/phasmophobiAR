@@ -25,6 +25,12 @@ namespace PhasmophobiAR.Ghosts
         [SerializeField]
         float m_ResultDelaySeconds = 0.4f;
 
+        [Header("Manifestation rarity")]
+        [SerializeField] bool m_UseManifestationWindows = true;
+        [SerializeField] Vector2 m_InitialManifestationDelaySeconds = new Vector2(7f, 14f);
+        [SerializeField] Vector2 m_ManifestationCooldownSeconds = new Vector2(20f, 36f);
+        [SerializeField] Vector2 m_ManifestationDurationSeconds = new Vector2(5f, 8f);
+
         GhostRevealCaptureStateMachine m_StateMachine;
         bool m_IsSubscribed;
         bool m_HasTriggeredResult;
@@ -34,6 +40,9 @@ namespace PhasmophobiAR.Ghosts
         float m_ResultDelayTimer;
         float m_CaptureElapsedSeconds;
         float m_FakeCaptureFailureRemaining;
+        bool m_IsManifestationWindowActive;
+        float m_NextManifestationTime;
+        float m_ManifestationEndTime;
 
         public GhostRevealState CurrentState => m_StateMachine != null ? m_StateMachine.CurrentState : GhostRevealState.Hidden;
         public float CaptureProgress => m_StateMachine != null ? m_StateMachine.CaptureProgress : 0f;
@@ -46,6 +55,7 @@ namespace PhasmophobiAR.Ghosts
         {
             ResolveReferences();
             BuildStateMachine();
+            ResetManifestationSchedule(true);
             ApplyVisualState();
         }
 
@@ -80,6 +90,9 @@ namespace PhasmophobiAR.Ghosts
                 return;
 
             if (m_GameStateManager != null && m_GameStateManager.CurrentPhase != GamePhase.Investigation)
+                return;
+
+            if (!UpdateManifestationWindow())
                 return;
 
             if (m_FakeCaptureFailureRemaining > 0f)
@@ -151,6 +164,58 @@ namespace PhasmophobiAR.Ghosts
             m_FakeCaptureFailureRemaining = Mathf.Max(0.1f, durationSeconds);
             m_GhostBehavior?.SetRevealState(GhostRevealState.Hidden, CaptureProgress);
             return true;
+        }
+
+        bool UpdateManifestationWindow()
+        {
+            if (!m_UseManifestationWindows)
+                return true;
+
+            var now = Time.unscaledTime;
+            var state = m_StateMachine != null ? m_StateMachine.CurrentState : GhostRevealState.Hidden;
+
+            // Never pull the ghost away while the player is actively capturing it.
+            if (state == GhostRevealState.Capturing || state == GhostRevealState.Captured)
+            {
+                m_IsManifestationWindowActive = true;
+                return true;
+            }
+
+            if (!m_IsManifestationWindowActive)
+            {
+                if (now < m_NextManifestationTime)
+                {
+                    m_GhostBehavior.SetRevealState(GhostRevealState.Hidden, CaptureProgress);
+                    return false;
+                }
+
+                m_IsManifestationWindowActive = true;
+                m_ManifestationEndTime = now + RandomRange(m_ManifestationDurationSeconds, 1f);
+            }
+
+            if (now < m_ManifestationEndTime)
+                return true;
+
+            m_IsManifestationWindowActive = false;
+            m_StateMachine?.Reset();
+            m_GhostBehavior.SetRevealState(GhostRevealState.Hidden, 0f);
+            m_NextManifestationTime = now + RandomRange(m_ManifestationCooldownSeconds, 5f);
+            return false;
+        }
+
+        void ResetManifestationSchedule(bool useInitialDelay)
+        {
+            m_IsManifestationWindowActive = !m_UseManifestationWindows;
+            m_ManifestationEndTime = 0f;
+            var range = useInitialDelay ? m_InitialManifestationDelaySeconds : m_ManifestationCooldownSeconds;
+            m_NextManifestationTime = Time.unscaledTime + RandomRange(range, 0f);
+        }
+
+        static float RandomRange(Vector2 range, float minimum)
+        {
+            var min = Mathf.Max(minimum, Mathf.Min(range.x, range.y));
+            var max = Mathf.Max(min, Mathf.Max(range.x, range.y));
+            return UnityEngine.Random.Range(min, max);
         }
 
         void ApplyStateChange(GhostRevealState previousState, GhostRevealState nextState)
@@ -247,7 +312,13 @@ namespace PhasmophobiAR.Ghosts
         void OnPhaseChanged(GamePhase phase)
         {
             if (phase == GamePhase.Setup || phase == GamePhase.RoomScan)
+            {
                 BuildStateMachine();
+                ResetManifestationSchedule(true);
+            }
+
+            if (phase == GamePhase.Investigation)
+                ResetManifestationSchedule(true);
 
             if (phase != GamePhase.Investigation)
                 m_FakeCaptureFailureRemaining = 0f;

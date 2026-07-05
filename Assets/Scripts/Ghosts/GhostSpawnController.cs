@@ -361,6 +361,10 @@ namespace PhasmophobiAR.Ghosts
                 ghost.AddComponent<PeripheralApparitionEvent>();
             if (ghost.GetComponent<FakeCaptureFailureEvent>() == null)
                 ghost.AddComponent<FakeCaptureFailureEvent>();
+            if (ghost.GetComponent<EnvironmentalFootstepEvent>() == null)
+                ghost.AddComponent<EnvironmentalFootstepEvent>();
+            if (ghost.GetComponent<CloseBreathingEvent>() == null)
+                ghost.AddComponent<CloseBreathingEvent>();
             director.Configure(m_GameStateManager, m_ARCamera, behavior, revealCapture);
             jumpScare.Configure(m_GameStateManager, m_ARCamera, behavior, director);
 
