@@ -142,7 +142,7 @@ namespace PhasmophobiAR.Tools
 
         void UpdateSpiritResponse()
         {
-            if (!TryGetNearestGhostDistance(out var distance) || distance > m_MaxResponseDistanceMeters)
+            if (!TryGetNearestResponsiveGhostDistance(out var distance) || distance > m_MaxResponseDistanceMeters)
             {
                 SetResponse(m_ListeningText);
                 return;
@@ -161,7 +161,7 @@ namespace PhasmophobiAR.Tools
             TryRecordSpiritResponseEvidence();
         }
 
-        bool TryGetNearestGhostDistance(out float nearestDistance)
+        bool TryGetNearestResponsiveGhostDistance(out float nearestDistance)
         {
             nearestDistance = float.PositiveInfinity;
 
@@ -172,7 +172,7 @@ namespace PhasmophobiAR.Tools
             var found = false;
             foreach (var ghost in ghosts)
             {
-                if (ghost == null)
+                if (!CanGhostGiveSpiritResponse(ghost))
                     continue;
 
                 var distance = Vector3.Distance(transform.position, ghost.WorldPosition);
@@ -184,6 +184,26 @@ namespace PhasmophobiAR.Tools
             }
 
             return found;
+        }
+
+        static bool CanGhostGiveSpiritResponse(GhostSpawnInfo ghost)
+        {
+            if (ghost?.ghostTransform == null)
+                return false;
+
+            var behavior = ghost.ghostTransform.GetComponent<GhostBehaviorController>();
+            var profile = behavior != null ? behavior.Profile : null;
+            var requiredEvidence = profile != null ? profile.requiredEvidence : null;
+            if (requiredEvidence == null)
+                return false;
+
+            foreach (var evidence in requiredEvidence)
+            {
+                if (evidence == EvidenceType.SpiritResponse)
+                    return true;
+            }
+
+            return false;
         }
 
         string GetGhostPhrase()
