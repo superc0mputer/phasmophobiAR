@@ -28,6 +28,7 @@ namespace PhasmophobiAR.UI
 
         void OnEnable()
         {
+            RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
             m_Camera ??= Camera.main;
             m_Volume ??= GetComponent<Volume>();
             if (m_ScreenMaterial == null)
@@ -44,11 +45,29 @@ namespace PhasmophobiAR.UI
             profile.TryGet(out m_Distortion);
         }
 
+        void OnDisable()
+        {
+            RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+        }
+
         void LateUpdate()
         {
             if (m_Camera == null) m_Camera = Camera.main;
-            if (m_Camera == null) return;
-            transform.SetPositionAndRotation(m_Camera.transform.position, m_Camera.transform.rotation);
+            SyncToCamera(m_Camera);
+        }
+
+        void OnBeginCameraRendering(ScriptableRenderContext _, Camera renderCamera)
+        {
+            if (m_Camera == null) m_Camera = Camera.main != null ? Camera.main : renderCamera;
+            if (renderCamera != m_Camera) return;
+            SyncToCamera(renderCamera);
+        }
+
+        void SyncToCamera(Camera targetCamera)
+        {
+            if (targetCamera == null) return;
+            m_Camera = targetCamera;
+            transform.SetPositionAndRotation(targetCamera.transform.position, targetCamera.transform.rotation);
             FitScreenToCamera();
         }
 
