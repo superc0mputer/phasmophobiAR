@@ -16,7 +16,8 @@ namespace PhasmophobiAR.Scanning
         ARPlaneMeshVisualizer m_PlaneMeshVisualizer;
         ARPlaneMeshVisualizerFader m_PlaneVisualizerFader;
         ARFeatheredPlaneMeshVisualizer m_FeatheredPlaneVisualizer;
-        bool m_LastVisibleState = true;
+        bool m_LastVisibleState;
+        bool m_HasAppliedVisibleState;
 
         void Awake()
         {
@@ -68,10 +69,11 @@ namespace PhasmophobiAR.Scanning
         void Apply(GamePhase phase)
         {
             var visible = phase == GamePhase.RoomScan;
-            if (visible == m_LastVisibleState && m_Renderers != null && m_Renderers.Length > 0)
+            if (m_HasAppliedVisibleState && visible == m_LastVisibleState && m_Renderers != null && m_Renderers.Length > 0)
                 return;
 
             m_LastVisibleState = visible;
+            m_HasAppliedVisibleState = true;
 
             if (m_Renderers == null || m_Renderers.Length == 0)
                 m_Renderers = GetComponentsInChildren<Renderer>(true);

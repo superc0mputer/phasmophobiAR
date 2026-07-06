@@ -89,6 +89,7 @@ namespace PhasmophobiAR.Scanning
             // Only show during Investigation
             if (m_GameStateManager != null && m_GameStateManager.CurrentPhase != GamePhase.Investigation)
             {
+                m_CurrentValue = 0f;
                 UpdateSlider(0f);
                 return;
             }

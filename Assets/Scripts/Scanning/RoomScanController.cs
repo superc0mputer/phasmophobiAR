@@ -164,7 +164,26 @@ namespace PhasmophobiAR.Scanning
             if (m_ARCamera == null)
                 m_ARCamera = Camera.main;
 
+            EnsureOptionalARManagers();
+
             CaptureInitialPlaneDetectionMode();
+        }
+
+        void EnsureOptionalARManagers()
+        {
+            if (m_PlaneManager == null)
+                return;
+
+            var managerObject = m_PlaneManager.gameObject;
+
+            if (m_PointCloudManager == null)
+                m_PointCloudManager = managerObject.GetComponent<ARPointCloudManager>() ?? managerObject.AddComponent<ARPointCloudManager>();
+
+            if (m_MeshManager == null)
+                m_MeshManager = managerObject.GetComponent<ARMeshManager>() ?? managerObject.AddComponent<ARMeshManager>();
+
+            if (m_OcclusionManager == null)
+                m_OcclusionManager = managerObject.GetComponent<AROcclusionManager>() ?? managerObject.AddComponent<AROcclusionManager>();
         }
 
         void OnEnable()
@@ -694,7 +713,7 @@ namespace PhasmophobiAR.Scanning
                     if (plane.trackingState != TrackingState.Tracking)
                         continue;
 
-                    Encapsulate(ref bounds, ref hasBounds, plane.center);
+                    Encapsulate(ref bounds, ref hasBounds, plane.transform.TransformPoint(plane.center));
                     var extents = plane.extents;
                     Encapsulate(ref bounds, ref hasBounds, plane.transform.TransformPoint(new Vector3(extents.x, 0f, extents.y)));
                     Encapsulate(ref bounds, ref hasBounds, plane.transform.TransformPoint(new Vector3(-extents.x, 0f, extents.y)));
@@ -721,8 +740,29 @@ namespace PhasmophobiAR.Scanning
 
         SafeGhostSpawnCandidate[] GetSafeSpawnCandidates()
         {
-            MergeSpawnCandidates(BuildCurrentSafeSpawnCandidates());
+            var currentCandidates = BuildCurrentSafeSpawnCandidates();
+            RemoveStaleSpawnCandidates(currentCandidates);
+            MergeSpawnCandidates(currentCandidates);
             return m_StableSpawnCandidates.ToArray();
+        }
+
+        void RemoveStaleSpawnCandidates(SafeGhostSpawnCandidate[] currentCandidates)
+        {
+            for (var stableIndex = m_StableSpawnCandidates.Count - 1; stableIndex >= 0; stableIndex--)
+            {
+                var isCurrent = false;
+                foreach (var current in currentCandidates)
+                {
+                    if (Vector3.Distance(m_StableSpawnCandidates[stableIndex].position, current.position) <= m_SpawnCandidateMergeDistanceMeters)
+                    {
+                        isCurrent = true;
+                        break;
+                    }
+                }
+
+                if (!isCurrent)
+                    m_StableSpawnCandidates.RemoveAt(stableIndex);
+            }
         }
 
         SafeGhostSpawnCandidate[] BuildCurrentSafeSpawnCandidates()
@@ -744,7 +784,7 @@ namespace PhasmophobiAR.Scanning
                     if (!isUsableSurface)
                         continue;
 
-                    var position = plane.center + Vector3.up * m_SpawnSurfaceHeightOffsetMeters;
+                    var position = plane.transform.TransformPoint(plane.center) + Vector3.up * m_SpawnSurfaceHeightOffsetMeters;
                     var distanceFromCamera = Vector3.Distance(position, cameraPosition);
                     if (distanceFromCamera < m_MinimumSpawnDistanceFromCameraMeters)
                         continue;

@@ -4,6 +4,7 @@ using PhasmophobiAR.Game;
 using PhasmophobiAR.Scanning;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
+using UnityEngine.XR.ARSubsystems;
 
 namespace PhasmophobiAR.Ghosts
 {
@@ -160,9 +161,25 @@ namespace PhasmophobiAR.Ghosts
             if (m_ARCamera == null && Camera.main != null)
                 m_ARCamera = Camera.main.transform;
 
+            EnsureAnchorManager();
+
             if (m_SceneGhosts != null)
                 foreach (var ghost in m_SceneGhosts)
                     if (ghost != null) ghost.SetActive(false);
+        }
+
+        void EnsureAnchorManager()
+        {
+            if (m_AnchorManager != null)
+                return;
+
+            m_AnchorManager = UnityEngine.Object.FindAnyObjectByType<ARAnchorManager>();
+            if (m_AnchorManager != null)
+                return;
+
+            var planeManager = UnityEngine.Object.FindAnyObjectByType<ARPlaneManager>();
+            if (planeManager != null)
+                m_AnchorManager = planeManager.gameObject.AddComponent<ARAnchorManager>();
         }
 
         void OnDestroy()
@@ -239,7 +256,7 @@ namespace PhasmophobiAR.Ghosts
             SpawnGhostsOnce(m_GameStateManager != null ? m_GameStateManager.LastRoomScanResult : null);
         }
 
-        public void SpawnGhostsOnce(RoomScanResult scanResult)
+        public async void SpawnGhostsOnce(RoomScanResult scanResult)
         {
             if (m_HasSpawned)
                 return;
@@ -280,21 +297,31 @@ namespace PhasmophobiAR.Ghosts
                     break;
 
                 var ghost = m_SceneGhosts[spawnedCount];
-                ghost.transform.SetParent(null, true);
-                ghost.transform.SetPositionAndRotation(candidate.pose.position, candidate.pose.rotation);
+                var anchor = await TryCreateAnchorAsync(candidate.pose);
+                if (!CanCompleteSpawn())
+                {
+                    if (anchor != null)
+                        UnityEngine.Object.Destroy(anchor.gameObject);
+                    return;
+                }
+
+                var anchorTransform = anchor != null ? anchor.transform : CreateWorldAnchor(candidate.pose, ghost.name);
+
+                ghost.transform.SetParent(anchorTransform, false);
+                ghost.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
                 ConfigureGhostBehavior(ghost);
                 ghost.SetActive(true);
 
                 var info = new GhostSpawnInfo
                 {
                     ghostTransform = ghost.transform,
-                    anchorTransform = null,
+                    anchorTransform = anchorTransform,
                     worldPose = candidate.pose,
-                    anchor = null,
+                    anchor = anchor,
                     source = candidate.source,
                     reason = candidate.reason,
                     score = candidate.score,
-                    hasARAnchor = false
+                    hasARAnchor = anchor != null
                 };
 
                 s_SpawnedGhosts.Add(info);
@@ -304,6 +331,34 @@ namespace PhasmophobiAR.Ghosts
 
             s_LastSpawnDiagnostics = diagnostics.BuildSummary(s_SpawnedGhosts);
             Debug.Log(s_LastSpawnDiagnostics);
+        }
+
+        async Awaitable<ARAnchor> TryCreateAnchorAsync(Pose pose)
+        {
+            if (m_AnchorManager == null || !m_AnchorManager.enabled)
+                return null;
+
+            try
+            {
+                var result = await m_AnchorManager.TryAddAnchorAsync(pose);
+                if (result.status.IsSuccess())
+                    return result.value;
+
+                Debug.LogWarning($"Could not create an AR anchor for a ghost spawn: {result.status}.");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Could not create an AR anchor for a ghost spawn: {exception.Message}");
+            }
+
+            return null;
+        }
+
+        static Transform CreateWorldAnchor(Pose pose, string ghostName)
+        {
+            var anchorObject = new GameObject($"{ghostName} World Anchor");
+            anchorObject.transform.SetPositionAndRotation(pose.position, pose.rotation);
+            return anchorObject.transform;
         }
 
         public void ResetSpawnedGhosts()
@@ -630,7 +685,13 @@ namespace PhasmophobiAR.Ghosts
                     continue;
 
                 if (info.ghostTransform != null)
+                {
+                    info.ghostTransform.SetParent(null, true);
                     info.ghostTransform.gameObject.SetActive(false);
+                }
+
+                if (info.anchorTransform != null)
+                    UnityEngine.Object.Destroy(info.anchorTransform.gameObject);
             }
 
             s_SpawnedGhosts.Clear();
