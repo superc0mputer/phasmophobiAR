@@ -14,6 +14,9 @@ namespace PhasmophobiAR.Markers
         [SerializeField]
         MarkerToolDefinition[] m_ToolDefinitions;
 
+        [SerializeField]
+        float m_ARReadinessTimeoutSeconds = 15f;
+
         readonly List<(string markerName, AddReferenceImageJobState state)> m_AddJobs = new List<(string, AddReferenceImageJobState)>();
         readonly HashSet<string> m_ReportedJobStatuses = new HashSet<string>();
         bool m_LoadStarted;
@@ -45,8 +48,17 @@ namespace PhasmophobiAR.Markers
 
             Debug.Log($"Marker image library loader waiting for ARSession readiness. Current state: {ARSession.state}.");
 
+            var readinessDeadline = Time.realtimeSinceStartup + Mathf.Max(1f, m_ARReadinessTimeoutSeconds);
             while (ARSession.state < ARSessionState.Ready)
+            {
+                if (ARSession.state == ARSessionState.Unsupported || Time.realtimeSinceStartup >= readinessDeadline)
+                {
+                    Debug.LogWarning($"Marker image library loading stopped because AR did not become ready. Final state: {ARSession.state}.");
+                    yield break;
+                }
+
                 yield return null;
+            }
 
             Debug.Log($"Marker image library loader continuing. ARSession state: {ARSession.state}.");
 
@@ -68,6 +80,7 @@ namespace PhasmophobiAR.Markers
             catch (System.Exception exception)
             {
                 Debug.LogWarning($"Image tracking is unavailable on this device/provider: {exception.Message}");
+                m_TrackedImageManager.enabled = wasEnabled;
                 yield break;
             }
 
@@ -75,6 +88,7 @@ namespace PhasmophobiAR.Markers
             if (mutableLibrary == null)
             {
                 Debug.LogWarning("Runtime image library is not mutable. Tool marker images could not be added at runtime.");
+                m_TrackedImageManager.enabled = wasEnabled;
                 yield break;
             }
 

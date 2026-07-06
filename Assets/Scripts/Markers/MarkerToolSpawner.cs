@@ -26,6 +26,7 @@ namespace PhasmophobiAR.Markers
         readonly Dictionary<string, MarkerToolDefinition> m_DefinitionsByMarkerName = new Dictionary<string, MarkerToolDefinition>();
         readonly Dictionary<Guid, MarkerToolDefinition> m_DefinitionsByTextureGuid = new Dictionary<Guid, MarkerToolDefinition>();
         readonly Dictionary<string, GameObject> m_SpawnedToolsByMarkerName = new Dictionary<string, GameObject>();
+        readonly Dictionary<TrackableId, string> m_MarkerNamesByTrackableId = new Dictionary<TrackableId, string>();
 
         public void Configure(
             GameStateManager gameStateManager,
@@ -112,7 +113,11 @@ namespace PhasmophobiAR.Markers
 
             foreach (var removed in eventArgs.removed)
             {
-                var markerName = removed.Value != null ? removed.Value.referenceImage.name : removed.Key.ToString();
+                var markerName = removed.Value != null ? removed.Value.referenceImage.name : null;
+                if (m_MarkerNamesByTrackableId.TryGetValue(removed.Key, out var trackedMarkerName))
+                    markerName = trackedMarkerName;
+
+                m_MarkerNamesByTrackableId.Remove(removed.Key);
                 Debug.Log($"Tool marker '{markerName}' removed by AR tracking.");
                 RemoveTool(markerName);
             }
@@ -129,6 +134,8 @@ namespace PhasmophobiAR.Markers
                 SetStatus("Unknown card. Use an investigation tool marker.");
                 return;
             }
+
+            m_MarkerNamesByTrackableId[trackedImage.trackableId] = markerName;
 
             Debug.Log($"Tool marker '{markerName}' {lifecycle}; state={trackedImage.trackingState}.");
             SetStatus($"{definition.DisplayName} card detected.");
