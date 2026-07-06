@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using PhasmophobiAR.Game;
 using PhasmophobiAR.Tools;
 using TMPro;
@@ -23,10 +24,14 @@ namespace PhasmophobiAR.Markers
         [SerializeField]
         TMP_Text m_StatusText;
 
+        [SerializeField]
+        private float m_MarkerLostDelay = 0.35f;
+
         readonly Dictionary<string, MarkerToolDefinition> m_DefinitionsByMarkerName = new Dictionary<string, MarkerToolDefinition>();
         readonly Dictionary<Guid, MarkerToolDefinition> m_DefinitionsByTextureGuid = new Dictionary<Guid, MarkerToolDefinition>();
         readonly Dictionary<string, GameObject> m_SpawnedToolsByMarkerName = new Dictionary<string, GameObject>();
         readonly Dictionary<TrackableId, string> m_MarkerNamesByTrackableId = new Dictionary<TrackableId, string>();
+        private readonly Dictionary<string, float> m_LastSeenTimeByMarkerName = new();
 
         public void Configure(
             GameStateManager gameStateManager,
@@ -85,6 +90,11 @@ namespace PhasmophobiAR.Markers
                 m_GameStateManager.PhaseChanged -= OnPhaseChanged;
         }
 
+        void Update()
+        {
+            UpdateMarkerLossTimeouts();
+        }
+
         void OnPhaseChanged(GamePhase phase)
         {
             Debug.Log($"Marker tool spawner phase changed to {phase}. CanPlaceTools={m_GameStateManager != null && m_GameStateManager.CanPlaceTools}.");
@@ -113,13 +123,20 @@ namespace PhasmophobiAR.Markers
 
             foreach (var removed in eventArgs.removed)
             {
-                var markerName = removed.Value != null ? removed.Value.referenceImage.name : null;
-                if (m_MarkerNamesByTrackableId.TryGetValue(removed.Key, out var trackedMarkerName))
-                    markerName = trackedMarkerName;
+                if (!m_MarkerNamesByTrackableId.TryGetValue(removed.Key, out var markerName))
+                {
+                    // Fallback for cases where the definition might not have been resolved yet
+                    markerName = removed.Value != null ? removed.Value.referenceImage.name : null;
+                }
 
+                if (!string.IsNullOrEmpty(markerName))
+                {
+                    Debug.Log($"Tool marker '{markerName}' removed by AR tracking system.");
+                    RemoveTool(markerName);
+                    m_LastSeenTimeByMarkerName.Remove(markerName);
+                }
+                
                 m_MarkerNamesByTrackableId.Remove(removed.Key);
-                Debug.Log($"Tool marker '{markerName}' removed by AR tracking.");
-                RemoveTool(markerName);
             }
         }
 
@@ -138,7 +155,6 @@ namespace PhasmophobiAR.Markers
             m_MarkerNamesByTrackableId[trackedImage.trackableId] = markerName;
 
             Debug.Log($"Tool marker '{markerName}' {lifecycle}; state={trackedImage.trackingState}.");
-            SetStatus($"{definition.DisplayName} card detected.");
 
             if (m_GameStateManager != null && !m_GameStateManager.CanPlaceTools)
             {
@@ -147,34 +163,63 @@ namespace PhasmophobiAR.Markers
                 return;
             }
 
-            if (trackedImage.trackingState == TrackingState.None)
+            switch (trackedImage.trackingState)
             {
-                Debug.Log($"Tool marker '{markerName}' is not currently tracking. Removing any attached tool until the marker is visible again.");
-                RemoveTool(markerName);
-                SetStatus($"Show the {definition.DisplayName} card to place it.");
+                case TrackingState.Tracking:
+                    m_LastSeenTimeByMarkerName[markerName] = Time.time;
+                    SetStatus($"{definition.DisplayName} card detected.");
+
+                    if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool) || tool == null)
+                    {
+                        tool = SpawnTool(definition, trackedImage.transform);
+                        if (tool == null)
+                        {
+                            Debug.LogError($"No prefab is assigned for {definition.DisplayName}.", this);
+                            SetStatus($"{definition.DisplayName} prefab is missing.");
+                            return;
+                        }
+
+                        m_SpawnedToolsByMarkerName[markerName] = tool;
+                        Debug.Log($"Spawned {definition.DisplayName} for marker '{markerName}'.");
+                        SetStatus($"{definition.DisplayName} tracking.");
+                    }
+                    else
+                    {
+                        AttachToMarker(tool.transform, trackedImage.transform);
+                        tool.SetActive(true);
+                        Debug.Log($"Updated {definition.DisplayName} to follow marker '{markerName}'.");
+                        SetStatus($"{definition.DisplayName} following card.");
+                    }
+                    break;
+
+                case TrackingState.Limited:
+                    Debug.Log($"Tool marker '{markerName}' has unstable tracking. Waiting for timeout to handle removal.");
+                    break;
+
+                case TrackingState.None:
+                    Debug.Log($"Tool marker '{markerName}' is not tracking. Timeout will handle removal.");
+                    break;
+            }
+        }
+
+        private void UpdateMarkerLossTimeouts()
+        {
+            if (m_LastSeenTimeByMarkerName.Count == 0)
                 return;
-            }
 
-            if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool) || tool == null)
+            // Use ToArray to prevent collection modification issues while iterating
+            foreach (var entry in m_LastSeenTimeByMarkerName.ToArray())
             {
-                tool = SpawnTool(definition, trackedImage.transform);
-                if (tool == null)
+                var markerName = entry.Key;
+                var lastSeenTime = entry.Value;
+
+                if (Time.time - lastSeenTime > m_MarkerLostDelay)
                 {
-                    Debug.LogError($"No prefab is assigned for {definition.DisplayName}.", this);
-                    SetStatus($"{definition.DisplayName} prefab is missing.");
-                    return;
+                    Debug.Log($"Tool marker '{markerName}' lost for longer than {m_MarkerLostDelay}s. Removing tool.");
+                    RemoveTool(markerName);
+                    m_LastSeenTimeByMarkerName.Remove(markerName);
+                    SetStatus("Show the tool card to place it again.");
                 }
-
-                m_SpawnedToolsByMarkerName[markerName] = tool;
-                Debug.Log($"Spawned {definition.DisplayName} for marker '{markerName}'.");
-                SetStatus($"{definition.DisplayName} tracking.");
-            }
-            else
-            {
-                AttachToMarker(tool.transform, trackedImage.transform);
-                tool.SetActive(true);
-                Debug.Log($"Updated {definition.DisplayName} to follow marker '{markerName}'.");
-                SetStatus($"{definition.DisplayName} following card.");
             }
         }
 
@@ -204,11 +249,18 @@ namespace PhasmophobiAR.Markers
                 return;
 
             if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool))
+            {
+                Debug.LogWarning($"Request to remove tool for marker '{markerName}', but no tool was found in the spawned list.");
                 return;
+            }
 
+            Debug.Log($"Removing tool for marker '{markerName}'.");
             m_SpawnedToolsByMarkerName.Remove(markerName);
             if (tool != null)
+            {
                 Destroy(tool);
+                Debug.Log($"Destroyed GameObject for tool '{markerName}'.");
+            }
         }
 
         void RebuildDefinitionLookup()
