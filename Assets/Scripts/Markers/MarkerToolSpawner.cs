@@ -147,7 +147,7 @@ namespace PhasmophobiAR.Markers
                 return;
             }
 
-            if (trackedImage.trackingState != TrackingState.Tracking)
+            if (trackedImage.trackingState == TrackingState.None)
             {
                 Debug.Log($"Tool marker '{markerName}' is not currently tracking. Removing any attached tool until the marker is visible again.");
                 RemoveTool(markerName);
