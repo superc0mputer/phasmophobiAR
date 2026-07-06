@@ -18692,19 +18692,19 @@ MonoBehaviour:
     m_TextureResourcePath: Markers/tool_emf_marker
     m_ToolType: 0
     m_ToolPrefab: {fileID: 6917689069273236839, guid: 5784160b656094d54ba1b54e608b6f91, type: 3}
-    m_PhysicalWidthMeters: 0.12
+    m_PhysicalWidthMeters: 0.195
   - m_MarkerName: tool_thermometer_marker
     m_DisplayName: Thermometer
     m_TextureResourcePath: Markers/tool_thermometer_marker
     m_ToolType: 1
     m_ToolPrefab: {fileID: 6038690136863436350, guid: 2d84aeb880f54e87b3d8596e4d426b10, type: 3}
-    m_PhysicalWidthMeters: 0.12
+    m_PhysicalWidthMeters: 0.195
   - m_MarkerName: tool_spirit_response_marker
     m_DisplayName: Spirit Response
     m_TextureResourcePath: Markers/tool_spirit_response_marker
     m_ToolType: 2
     m_ToolPrefab: {fileID: 100000, guid: d5cfd4ebea1c45fd8e7d8e0af3103770, type: 3}
-    m_PhysicalWidthMeters: 0.12
+    m_PhysicalWidthMeters: 0.195
   m_StatusText: {fileID: 1143187977}
 --- !u!114 &1357280003
 MonoBehaviour:
@@ -18725,19 +18725,19 @@ MonoBehaviour:
     m_TextureResourcePath: Markers/tool_emf_marker
     m_ToolType: 0
     m_ToolPrefab: {fileID: 6917689069273236839, guid: 5784160b656094d54ba1b54e608b6f91, type: 3}
-    m_PhysicalWidthMeters: 0.12
+    m_PhysicalWidthMeters: 0.195
   - m_MarkerName: tool_thermometer_marker
     m_DisplayName: Thermometer
     m_TextureResourcePath: Markers/tool_thermometer_marker
     m_ToolType: 1
     m_ToolPrefab: {fileID: 6038690136863436350, guid: 2d84aeb880f54e87b3d8596e4d426b10, type: 3}
-    m_PhysicalWidthMeters: 0.12
+    m_PhysicalWidthMeters: 0.195
   - m_MarkerName: tool_spirit_response_marker
     m_DisplayName: Spirit Response
     m_TextureResourcePath: Markers/tool_spirit_response_marker
     m_ToolType: 2
     m_ToolPrefab: {fileID: 100000, guid: d5cfd4ebea1c45fd8e7d8e0af3103770, type: 3}
-    m_PhysicalWidthMeters: 0.12
+    m_PhysicalWidthMeters: 0.195
   m_ARReadinessTimeoutSeconds: 15
 --- !u!114 &1357280004
 MonoBehaviour:
