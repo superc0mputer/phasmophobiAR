@@ -17,6 +17,14 @@ namespace PhasmophobiAR.UI
         ScannerMode m_Mode;
         [SerializeField] Material m_ScreenMaterial;
         [SerializeField] Camera m_Camera;
+        Renderer m_ScreenRenderer;
+        Transform m_Screen;
+
+        // AR Foundation replaces the camera projection matrix on-device. Keeping the
+        // overlay at an authored distance can therefore put it inside Android's near
+        // clip plane, even though it is visible in the Editor.
+        const float ScreenDepthPadding = .05f;
+        const float ScreenOverscan = 1.03f;
 
         void OnEnable()
         {
@@ -27,6 +35,7 @@ namespace PhasmophobiAR.UI
                 var screen = transform.Find("Lens Noise and Scanlines");
                 if (screen != null && screen.TryGetComponent<Renderer>(out var renderer)) m_ScreenMaterial = renderer.sharedMaterial;
             }
+            CacheScreen();
             var profile = m_Volume != null ? m_Volume.sharedProfile : null;
             if (profile == null) return;
             profile.TryGet(out m_Vignette);
@@ -40,6 +49,44 @@ namespace PhasmophobiAR.UI
             if (m_Camera == null) m_Camera = Camera.main;
             if (m_Camera == null) return;
             transform.SetPositionAndRotation(m_Camera.transform.position, m_Camera.transform.rotation);
+            FitScreenToCamera();
+        }
+
+        void CacheScreen()
+        {
+            m_Screen ??= transform.Find("Lens Noise and Scanlines");
+            if (m_Screen != null && m_ScreenRenderer == null)
+                m_Screen.TryGetComponent(out m_ScreenRenderer);
+            if (m_ScreenMaterial == null && m_ScreenRenderer != null)
+                m_ScreenMaterial = m_ScreenRenderer.sharedMaterial;
+        }
+
+        void FitScreenToCamera()
+        {
+            CacheScreen();
+            if (m_Screen == null) return;
+
+            // Use the runtime projection rather than Camera.fieldOfView: AR cameras
+            // can supply an asymmetric, orientation-dependent projection on Android.
+            var depth = Mathf.Max(m_Camera.nearClipPlane + ScreenDepthPadding, .15f);
+            var bottomLeft = m_Camera.ViewportToWorldPoint(new Vector3(0f, 0f, depth));
+            var bottomRight = m_Camera.ViewportToWorldPoint(new Vector3(1f, 0f, depth));
+            var topLeft = m_Camera.ViewportToWorldPoint(new Vector3(0f, 1f, depth));
+            var center = m_Camera.ViewportToWorldPoint(new Vector3(.5f, .5f, depth));
+
+            m_Screen.SetPositionAndRotation(center, m_Camera.transform.rotation);
+            m_Screen.localScale = new Vector3(
+                Vector3.Distance(bottomLeft, bottomRight) * ScreenOverscan,
+                Vector3.Distance(bottomLeft, topLeft) * ScreenOverscan,
+                1f);
+
+            // AR background renderers may use unusual depth state. This overlay is
+            // explicitly transparent and must be submitted after normal geometry.
+            if (m_ScreenRenderer != null)
+            {
+                m_ScreenRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                m_ScreenRenderer.receiveShadows = false;
+            }
         }
 
         public void SetVisible(bool visible) { if (m_Volume != null) m_Volume.enabled = visible; }
