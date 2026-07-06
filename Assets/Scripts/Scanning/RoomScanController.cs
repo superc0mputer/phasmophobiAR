@@ -164,26 +164,7 @@ namespace PhasmophobiAR.Scanning
             if (m_ARCamera == null)
                 m_ARCamera = Camera.main;
 
-            EnsureOptionalARManagers();
-
             CaptureInitialPlaneDetectionMode();
-        }
-
-        void EnsureOptionalARManagers()
-        {
-            if (m_PlaneManager == null)
-                return;
-
-            var managerObject = m_PlaneManager.gameObject;
-
-            if (m_PointCloudManager == null)
-                m_PointCloudManager = managerObject.GetComponent<ARPointCloudManager>() ?? managerObject.AddComponent<ARPointCloudManager>();
-
-            if (m_MeshManager == null)
-                m_MeshManager = managerObject.GetComponent<ARMeshManager>() ?? managerObject.AddComponent<ARMeshManager>();
-
-            if (m_OcclusionManager == null)
-                m_OcclusionManager = managerObject.GetComponent<AROcclusionManager>() ?? managerObject.AddComponent<AROcclusionManager>();
         }
 
         void OnEnable()

@@ -3,6 +3,7 @@ Shader "PhasmophobiAR/ParanormalLensOverlay"
     Properties
     {
         _Tint ("Tint", Color) = (0.18, 0.45, 0.3, 1)
+        _Visibility ("Visibility", Range(0.25, 3)) = 1.6
         _Interference ("Interference", Range(0, 1)) = 0.1
         _Flicker ("Flicker", Range(0, 1)) = 0
     }
@@ -24,6 +25,7 @@ Shader "PhasmophobiAR/ParanormalLensOverlay"
             struct Varyings { float4 positionCS : SV_POSITION; float2 uv : TEXCOORD0; };
             CBUFFER_START(UnityPerMaterial)
                 half4 _Tint;
+                half _Visibility;
                 half _Interference;
                 half _Flicker;
             CBUFFER_END
@@ -51,9 +53,10 @@ Shader "PhasmophobiAR/ParanormalLensOverlay"
                 float2 centered = input.uv * 2.0 - 1.0;
                 float edge = smoothstep(.46, 1.22, dot(centered, centered));
                 float glitchBand = step(.965, Hash(float2(timeStep, floor(input.uv.y * 18.0))));
-                float alpha = edge * .2 + scan * (.018 + _Interference * .025)
-                    + grain * (.016 + _Interference * .055) + glitchBand * _Interference * .07 + _Flicker;
-                return half4(_Tint.rgb + grain * .08, saturate(alpha));
+                float alpha = edge * .24 + scan * (.035 + _Interference * .045)
+                    + grain * (.025 + _Interference * .075) + glitchBand * _Interference * .1 + _Flicker;
+                alpha *= _Visibility;
+                return half4(saturate(_Tint.rgb * 1.18 + grain * .12), saturate(alpha));
             }
             ENDHLSL
         }

@@ -26,7 +26,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _Flicker: 0
-    - _Interference: 0.1
+    - _Interference: 0.22
+    - _Visibility: 1.6
     m_Colors:
     - _Tint: {r: 0.17999998, g: 0.45, b: 0.29999998, a: 1}
   m_BuildTextureStacks: []
