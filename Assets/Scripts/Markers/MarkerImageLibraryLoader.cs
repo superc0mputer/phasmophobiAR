@@ -19,6 +19,8 @@ namespace PhasmophobiAR.Markers
 
         readonly List<(string markerName, AddReferenceImageJobState state)> m_AddJobs = new List<(string, AddReferenceImageJobState)>();
         readonly HashSet<string> m_ReportedJobStatuses = new HashSet<string>();
+        readonly HashSet<string> m_RegisteredMarkerNames = new HashSet<string>();
+        readonly HashSet<string> m_FailedMarkerNames = new HashSet<string>();
         bool m_LoadStarted;
 
         public bool IsLoaded { get; private set; }
@@ -127,13 +129,13 @@ namespace PhasmophobiAR.Markers
                 yield return null;
 
             IsLoaded = true;
-            m_TrackedImageManager.requestedMaxNumberOfMovingImages = Mathf.Max(1, m_ToolDefinitions?.Length ?? 0);
+            m_TrackedImageManager.requestedMaxNumberOfMovingImages = Mathf.Max(1, m_RegisteredMarkerNames.Count);
             m_TrackedImageManager.enabled = wasEnabled || HasDefinitions(m_ToolDefinitions);
 
             if (m_AddJobs.Count == 0 && HasDefinitions(m_ToolDefinitions))
                 Debug.LogWarning("No marker images were added to the runtime library. Image tracking is still enabled so XR Simulation can report simulated tracked images.");
 
-            Debug.Log($"Marker image library ready with {m_AddJobs.Count} scheduled marker images. Image manager enabled: {m_TrackedImageManager.enabled}.");
+            Debug.Log($"Marker image library ready. Registered={m_RegisteredMarkerNames.Count}/{m_AddJobs.Count}, Failed={m_FailedMarkerNames.Count}, RequestedMovingImages={m_TrackedImageManager.requestedMaxNumberOfMovingImages}, Image manager enabled={m_TrackedImageManager.enabled}.");
         }
 
         bool AllJobsComplete()
@@ -153,9 +155,15 @@ namespace PhasmophobiAR.Markers
                     continue;
 
                 if (status.IsSuccess())
+                {
+                    m_RegisteredMarkerNames.Add(addJob.markerName);
                     Debug.Log($"Marker image '{addJob.markerName}' added to runtime library.");
+                }
                 else if (status.IsError())
+                {
+                    m_FailedMarkerNames.Add(addJob.markerName);
                     Debug.LogWarning($"Marker image '{addJob.markerName}' failed to add: {status}");
+                }
             }
 
             return allComplete;

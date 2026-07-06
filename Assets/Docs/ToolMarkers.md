@@ -6,7 +6,7 @@ The MVP marker cards live in `Assets/Resources/Markers` and are designed to look
 - `tool_thermometer_marker.png` maps to the Thermometer.
 - `tool_spirit_response_marker.png` maps to Spirit Response.
 
-Print each marker at roughly 12 cm wide. Keep the full black border visible and avoid glossy paper if tracking is unstable. Do not crop out the border frame; those details help ARKit recognize the card.
+Print each marker at roughly 19.5 cm wide. Keep the full black border visible and avoid glossy paper if tracking is unstable. Do not crop out the border frame; those details help ARKit recognize the card.
 
 The current marker set uses a cleaner “tool art + designed border” approach. The center image should stay visually close to the actual tool, while the border carries most of the asymmetrical, tracking-friendly detail.
 
