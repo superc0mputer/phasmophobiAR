@@ -22,7 +22,7 @@ namespace PhasmophobiAR.Markers
         GameObject m_ToolPrefab;
 
         [SerializeField]
-        float m_PhysicalWidthMeters = 0.12f;
+        float m_PhysicalWidthMeters = 0.195f;
 
         public string MarkerName => m_MarkerName;
         public string DisplayName => string.IsNullOrEmpty(m_DisplayName) ? m_MarkerName : m_DisplayName;

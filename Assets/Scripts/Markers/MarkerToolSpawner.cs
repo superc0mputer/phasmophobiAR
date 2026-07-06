@@ -23,10 +23,25 @@ namespace PhasmophobiAR.Markers
         [SerializeField]
         TMP_Text m_StatusText;
 
+        [SerializeField]
+        Camera m_ARCamera;
+
+        [SerializeField, Min(0.1f)]
+        float m_MarkerVisibilityGraceSeconds = 0.75f;
+
+        [SerializeField, Min(0.1f)]
+        float m_PartialTrackingGraceSeconds = 1.5f;
+
+        [SerializeField, Range(0f, 0.5f)]
+        float m_MarkerViewportMargin = 0.12f;
+
         readonly Dictionary<string, MarkerToolDefinition> m_DefinitionsByMarkerName = new Dictionary<string, MarkerToolDefinition>();
         readonly Dictionary<Guid, MarkerToolDefinition> m_DefinitionsByTextureGuid = new Dictionary<Guid, MarkerToolDefinition>();
         readonly Dictionary<string, GameObject> m_SpawnedToolsByMarkerName = new Dictionary<string, GameObject>();
         readonly Dictionary<TrackableId, string> m_MarkerNamesByTrackableId = new Dictionary<TrackableId, string>();
+        readonly Dictionary<string, float> m_LastVisibleTimeByMarkerName = new Dictionary<string, float>();
+        readonly Dictionary<string, float> m_PartialTrackingStartTimeByMarkerName = new Dictionary<string, float>();
+        readonly List<string> m_ExpiredMarkerNames = new List<string>();
 
         public void Configure(
             GameStateManager gameStateManager,
@@ -66,6 +81,9 @@ namespace PhasmophobiAR.Markers
                     m_StatusText = statusObject.GetComponent<TMP_Text>();
             }
 
+            if (m_ARCamera == null)
+                m_ARCamera = Camera.main;
+
             Debug.Log($"Marker tool spawner enabled. Image manager: {(m_TrackedImageManager != null ? m_TrackedImageManager.name : "none")}. Definitions: {m_DefinitionsByMarkerName.Count}.");
             SetStatus("Ready your tool cards.");
 
@@ -83,6 +101,13 @@ namespace PhasmophobiAR.Markers
 
             if (m_GameStateManager != null)
                 m_GameStateManager.PhaseChanged -= OnPhaseChanged;
+        }
+
+        void Update()
+        {
+            var now = Time.realtimeSinceStartup;
+            RefreshVisibleTrackedImages(now);
+            RemoveExpiredTools(now);
         }
 
         void OnPhaseChanged(GamePhase phase)
@@ -120,6 +145,11 @@ namespace PhasmophobiAR.Markers
                 m_MarkerNamesByTrackableId.Remove(removed.Key);
                 Debug.Log($"Tool marker '{markerName}' removed by AR tracking.");
                 RemoveTool(markerName);
+                if (!string.IsNullOrEmpty(markerName))
+                {
+                    m_LastVisibleTimeByMarkerName.Remove(markerName);
+                    m_PartialTrackingStartTimeByMarkerName.Remove(markerName);
+                }
             }
         }
 
@@ -147,13 +177,40 @@ namespace PhasmophobiAR.Markers
                 return;
             }
 
-            if (trackedImage.trackingState == TrackingState.None)
+            var now = Time.realtimeSinceStartup;
+            var visibility = GetMarkerVisibility(trackedImage);
+            if (visibility == MarkerVisibility.NotVisible)
             {
-                Debug.Log($"Tool marker '{markerName}' is not currently tracking. Removing any attached tool until the marker is visible again.");
-                RemoveTool(markerName);
-                SetStatus($"Show the {definition.DisplayName} card to place it.");
+                Debug.Log($"Tool marker '{markerName}' is not currently visible. Waiting up to {m_MarkerVisibilityGraceSeconds:0.00}s before removing its tool.");
+                RemoveToolIfExpired(markerName, definition, now);
                 return;
             }
+
+            if (visibility == MarkerVisibility.Partial)
+            {
+                if (!m_PartialTrackingStartTimeByMarkerName.TryGetValue(markerName, out var partialStartTime))
+                {
+                    partialStartTime = now;
+                    m_PartialTrackingStartTimeByMarkerName[markerName] = partialStartTime;
+                }
+
+                if (HasVisibilityTimedOut(now, partialStartTime, m_PartialTrackingGraceSeconds))
+                {
+                    Debug.Log($"Tool marker '{markerName}' stayed in partial tracking for more than {m_PartialTrackingGraceSeconds:0.00}s. Removing stale tool until full tracking returns.");
+                    RemoveTool(markerName);
+                    m_LastVisibleTimeByMarkerName.Remove(markerName);
+                    SetStatus($"Show the full {definition.DisplayName} card to place it.");
+                    return;
+                }
+
+                SetStatus($"{definition.DisplayName} partially tracking.");
+            }
+            else
+            {
+                m_PartialTrackingStartTimeByMarkerName.Remove(markerName);
+            }
+
+            m_LastVisibleTimeByMarkerName[markerName] = now;
 
             if (!m_SpawnedToolsByMarkerName.TryGetValue(markerName, out var tool) || tool == null)
             {
@@ -167,14 +224,16 @@ namespace PhasmophobiAR.Markers
 
                 m_SpawnedToolsByMarkerName[markerName] = tool;
                 Debug.Log($"Spawned {definition.DisplayName} for marker '{markerName}'.");
-                SetStatus($"{definition.DisplayName} tracking.");
+                if (visibility == MarkerVisibility.Confirmed)
+                    SetStatus($"{definition.DisplayName} tracking.");
             }
             else
             {
                 AttachToMarker(tool.transform, trackedImage.transform);
                 tool.SetActive(true);
                 Debug.Log($"Updated {definition.DisplayName} to follow marker '{markerName}'.");
-                SetStatus($"{definition.DisplayName} following card.");
+                if (visibility == MarkerVisibility.Confirmed)
+                    SetStatus($"{definition.DisplayName} following card.");
             }
         }
 
@@ -209,6 +268,92 @@ namespace PhasmophobiAR.Markers
             m_SpawnedToolsByMarkerName.Remove(markerName);
             if (tool != null)
                 Destroy(tool);
+        }
+
+        void RefreshVisibleTrackedImages(float now)
+        {
+            if (m_TrackedImageManager == null || m_SpawnedToolsByMarkerName.Count == 0)
+                return;
+
+            foreach (var trackedImage in m_TrackedImageManager.trackables)
+            {
+                if (trackedImage == null || !TryGetDefinition(trackedImage, out var markerName, out _))
+                    continue;
+
+                if (!m_SpawnedToolsByMarkerName.ContainsKey(markerName))
+                    continue;
+
+                var visibility = GetMarkerVisibility(trackedImage);
+                if (visibility == MarkerVisibility.NotVisible)
+                    continue;
+
+                m_LastVisibleTimeByMarkerName[markerName] = now;
+                if (visibility == MarkerVisibility.Confirmed)
+                {
+                    m_PartialTrackingStartTimeByMarkerName.Remove(markerName);
+                    continue;
+                }
+
+                if (!m_PartialTrackingStartTimeByMarkerName.ContainsKey(markerName))
+                    m_PartialTrackingStartTimeByMarkerName[markerName] = now;
+            }
+        }
+
+        void RemoveExpiredTools(float now)
+        {
+            if (m_SpawnedToolsByMarkerName.Count == 0)
+                return;
+
+            m_ExpiredMarkerNames.Clear();
+            foreach (var spawnedTool in m_SpawnedToolsByMarkerName)
+            {
+                if (spawnedTool.Value == null)
+                {
+                    m_ExpiredMarkerNames.Add(spawnedTool.Key);
+                    continue;
+                }
+
+                if (!m_LastVisibleTimeByMarkerName.TryGetValue(spawnedTool.Key, out var lastVisibleTime)
+                    || HasVisibilityTimedOut(now, lastVisibleTime, m_MarkerVisibilityGraceSeconds))
+                {
+                    m_ExpiredMarkerNames.Add(spawnedTool.Key);
+                    continue;
+                }
+
+                if (m_PartialTrackingStartTimeByMarkerName.TryGetValue(spawnedTool.Key, out var partialStartTime)
+                    && HasVisibilityTimedOut(now, partialStartTime, m_PartialTrackingGraceSeconds))
+                {
+                    m_ExpiredMarkerNames.Add(spawnedTool.Key);
+                }
+            }
+
+            foreach (var markerName in m_ExpiredMarkerNames)
+            {
+                if (m_DefinitionsByMarkerName.TryGetValue(markerName, out var definition))
+                    Debug.Log($"Tool marker '{markerName}' visibility timed out. Removing {definition.DisplayName} until the card is visible again.");
+                else
+                    Debug.Log($"Tool marker '{markerName}' visibility timed out. Removing its tool until the card is visible again.");
+
+                RemoveTool(markerName);
+                m_LastVisibleTimeByMarkerName.Remove(markerName);
+                m_PartialTrackingStartTimeByMarkerName.Remove(markerName);
+            }
+        }
+
+        void RemoveToolIfExpired(string markerName, MarkerToolDefinition definition, float now)
+        {
+            if (!m_LastVisibleTimeByMarkerName.TryGetValue(markerName, out var lastVisibleTime)
+                || HasVisibilityTimedOut(now, lastVisibleTime, m_MarkerVisibilityGraceSeconds))
+            {
+                RemoveTool(markerName);
+                m_LastVisibleTimeByMarkerName.Remove(markerName);
+                m_PartialTrackingStartTimeByMarkerName.Remove(markerName);
+                SetStatus($"Show the {definition.DisplayName} card to place it.");
+            }
+            else
+            {
+                SetStatus($"{definition.DisplayName} reacquiring...");
+            }
         }
 
         void RebuildDefinitionLookup()
@@ -274,6 +419,76 @@ namespace PhasmophobiAR.Markers
         static bool HasDefinitions(MarkerToolDefinition[] definitions)
         {
             return definitions != null && definitions.Length > 0;
+        }
+
+        MarkerVisibility GetMarkerVisibility(ARTrackedImage trackedImage)
+        {
+            if (!IsVisibleTrackingState(trackedImage.trackingState))
+                return MarkerVisibility.NotVisible;
+
+            if (m_ARCamera == null)
+                m_ARCamera = Camera.main;
+
+            var isInsideViewport = m_ARCamera == null
+                || IsMarkerInsideViewport(
+                    m_ARCamera,
+                    trackedImage.transform,
+                    trackedImage.size,
+                    m_MarkerViewportMargin);
+
+            if (!isInsideViewport)
+                return MarkerVisibility.NotVisible;
+
+            return trackedImage.trackingState == TrackingState.Tracking
+                ? MarkerVisibility.Confirmed
+                : MarkerVisibility.Partial;
+        }
+
+        public static bool IsMarkerInsideViewport(Camera camera, Transform markerTransform, Vector2 markerSize, float viewportMargin)
+        {
+            if (camera == null || markerTransform == null)
+                return false;
+
+            var halfWidth = Mathf.Max(0.01f, markerSize.x) * 0.5f;
+            var halfHeight = Mathf.Max(0.01f, markerSize.y) * 0.5f;
+            var margin = Mathf.Max(0f, viewportMargin);
+
+            return IsWorldPointInsideViewport(camera, markerTransform.position, margin)
+                || IsWorldPointInsideViewport(camera, markerTransform.TransformPoint(new Vector3(-halfWidth, 0f, -halfHeight)), margin)
+                || IsWorldPointInsideViewport(camera, markerTransform.TransformPoint(new Vector3(-halfWidth, 0f, halfHeight)), margin)
+                || IsWorldPointInsideViewport(camera, markerTransform.TransformPoint(new Vector3(halfWidth, 0f, -halfHeight)), margin)
+                || IsWorldPointInsideViewport(camera, markerTransform.TransformPoint(new Vector3(halfWidth, 0f, halfHeight)), margin);
+        }
+
+        public static bool IsWorldPointInsideViewport(Camera camera, Vector3 worldPoint, float viewportMargin)
+        {
+            if (camera == null)
+                return false;
+
+            var viewportPoint = camera.WorldToViewportPoint(worldPoint);
+            var margin = Mathf.Max(0f, viewportMargin);
+            return viewportPoint.z > 0f
+                && viewportPoint.x >= -margin
+                && viewportPoint.x <= 1f + margin
+                && viewportPoint.y >= -margin
+                && viewportPoint.y <= 1f + margin;
+        }
+
+        public static bool IsVisibleTrackingState(TrackingState trackingState)
+        {
+            return trackingState == TrackingState.Tracking || trackingState == TrackingState.Limited;
+        }
+
+        public static bool HasVisibilityTimedOut(float now, float lastVisibleTime, float timeoutSeconds)
+        {
+            return now - lastVisibleTime >= Mathf.Max(0f, timeoutSeconds);
+        }
+
+        enum MarkerVisibility
+        {
+            NotVisible,
+            Partial,
+            Confirmed
         }
     }
 }

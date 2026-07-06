@@ -28,21 +28,21 @@ namespace PhasmophobiAR.Markers
                     "Markers/tool_emf_marker",
                     MarkerToolType.EMFReader,
                     emfPrefab,
-                    0.12f),
+                    0.195f),
                 new MarkerToolDefinition(
                     ThermometerMarkerName,
                     "Thermometer",
                     "Markers/tool_thermometer_marker",
                     MarkerToolType.Thermometer,
                     thermometerPrefab,
-                    0.12f),
+                    0.195f),
                 new MarkerToolDefinition(
                     SpiritResponseMarkerName,
                     "Spirit Response",
                     "Markers/tool_spirit_response_marker",
                     MarkerToolType.SpiritResponse,
                     spiritResponsePrefab,
-                    0.12f)
+                    0.195f)
             };
         }
     }
