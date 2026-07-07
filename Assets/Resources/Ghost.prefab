@@ -81,14 +81,14 @@ MonoBehaviour:
   m_Settings:
     partialRevealDistanceMeters: 3
     partialRevealAngleDegrees: 30
-    revealDistanceMeters: 1.6
-    revealAngleDegrees: 14
+    revealDistanceMeters: 2.4
+    revealAngleDegrees: 22
     partialRevealHoldSeconds: 0.35
     revealHoldSeconds: 1
     captureSeconds: 3
     minimumTrackingConfidence: 2
-    captureZoneDistanceMeters: 1.7
-    captureZoneAngleDegrees: 8
+    captureZoneDistanceMeters: 3
+    captureZoneAngleDegrees: 24
     captureProgressResetDelaySeconds: 0.4
     captureProgressBonusAtCenter: 0.25
   m_ResultDelaySeconds: 0.4

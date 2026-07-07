@@ -144,8 +144,11 @@ namespace PhasmophobiAR.Ghosts
             {
                 var revealMultiplier = Mathf.Lerp(1.15f, 0.8f, Mathf.Clamp01(m_GhostBehavior.RevealDifficulty));
                 var captureMultiplier = Mathf.Lerp(0.9f, 1.35f, Mathf.Clamp01(m_GhostBehavior.CaptureDifficulty));
+                var captureZoneMultiplier = Mathf.Lerp(1.1f, 0.85f, Mathf.Clamp01(m_GhostBehavior.CaptureDifficulty));
                 settings.partialRevealDistanceMeters = Mathf.Max(0.1f, settings.partialRevealDistanceMeters * revealMultiplier);
                 settings.revealDistanceMeters = Mathf.Max(0.1f, settings.revealDistanceMeters * revealMultiplier);
+                settings.captureZoneDistanceMeters = Mathf.Max(0.1f, settings.captureZoneDistanceMeters * captureZoneMultiplier);
+                settings.captureZoneAngleDegrees = Mathf.Max(1f, settings.captureZoneAngleDegrees * captureZoneMultiplier);
                 settings.captureSeconds = Mathf.Max(0.1f, settings.captureSeconds * captureMultiplier);
             }
 

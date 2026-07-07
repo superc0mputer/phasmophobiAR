@@ -273,6 +273,7 @@ namespace PhasmophobiAR.Ghosts
             {
                 s_LastSpawnDiagnostics = "Ghost activation failed: missing scene ghost or AR camera.";
                 Debug.LogError("Assign one or more scene-authored ghosts to GhostSpawnController. Runtime creation is disabled.", this);
+                RequestRoomRescan("Ghost setup failed. Scan the room again.");
                 return;
             }
 
@@ -331,6 +332,18 @@ namespace PhasmophobiAR.Ghosts
 
             s_LastSpawnDiagnostics = diagnostics.BuildSummary(s_SpawnedGhosts);
             Debug.Log(s_LastSpawnDiagnostics);
+
+            if (spawnedCount == 0)
+            {
+                m_HasSpawned = false;
+                RequestRoomRescan("No safe ghost spawn was found. Scan the room again.");
+            }
+        }
+
+        void RequestRoomRescan(string prompt)
+        {
+            Debug.LogWarning($"{prompt}\n{s_LastSpawnDiagnostics}", this);
+            m_GameStateManager?.RequestRoomRescan(prompt);
         }
 
         async Awaitable<ARAnchor> TryCreateAnchorAsync(Pose pose)
