@@ -40,6 +40,9 @@ namespace PhasmophobiAR.Scanning
         GameStateManager m_GameStateManager;
 
         [SerializeField]
+        ARSession m_ARSession;
+
+        [SerializeField]
         Camera m_ARCamera;
 
         [SerializeField]
@@ -161,6 +164,9 @@ namespace PhasmophobiAR.Scanning
             if (m_GameStateManager == null)
                 m_GameStateManager = GameStateManager.Instance;
 
+            if (m_ARSession == null)
+                m_ARSession = UnityEngine.Object.FindAnyObjectByType<ARSession>();
+
             if (m_ARCamera == null)
                 m_ARCamera = Camera.main;
 
@@ -170,7 +176,10 @@ namespace PhasmophobiAR.Scanning
         void OnEnable()
         {
             if (m_GameStateManager != null)
+            {
                 m_GameStateManager.PhaseChanged += OnPhaseChanged;
+                m_GameStateManager.RoomRescanRequested += OnRoomRescanRequested;
+            }
 
             if (m_PlaneManager != null)
                 m_PlaneManager.trackablesChanged.AddListener(OnPlanesChanged);
@@ -184,7 +193,10 @@ namespace PhasmophobiAR.Scanning
         void OnDisable()
         {
             if (m_GameStateManager != null)
+            {
                 m_GameStateManager.PhaseChanged -= OnPhaseChanged;
+                m_GameStateManager.RoomRescanRequested -= OnRoomRescanRequested;
+            }
 
             if (m_PlaneManager != null)
                 m_PlaneManager.trackablesChanged.RemoveListener(OnPlanesChanged);
@@ -214,6 +226,11 @@ namespace PhasmophobiAR.Scanning
 
         public void RestartScan()
         {
+            RestartScan(false);
+        }
+
+        void RestartScan(bool resetARSession)
+        {
             m_ElapsedSeconds = 0f;
             m_StableTrackingSeconds = 0f;
             m_GoodTrackingSeconds = 0f;
@@ -224,9 +241,31 @@ namespace PhasmophobiAR.Scanning
             m_IsScanReady = false;
             m_InvestigationStarted = false;
             m_StableSpawnCandidates.Clear();
+            if (resetARSession)
+                ResetARSession();
+
             SetConfidence(EvaluateTrackingConfidence());
             m_ProgressChanged.Invoke(m_Progress);
             ApplyScanVisualizationState();
+        }
+
+        void OnRoomRescanRequested()
+        {
+            RestartScan(true);
+        }
+
+        void ResetARSession()
+        {
+            if (m_ARSession == null)
+                m_ARSession = UnityEngine.Object.FindAnyObjectByType<ARSession>();
+
+            if (m_ARSession == null)
+            {
+                Debug.LogWarning("Room rescan requested, but no ARSession was found to reset.", this);
+                return;
+            }
+
+            m_ARSession.Reset();
         }
 
         void OnPhaseChanged(GamePhase phase)

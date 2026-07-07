@@ -44,6 +44,7 @@ namespace PhasmophobiAR.UI
         Button m_StartInvestigationButton;
 
         bool m_IsSubscribed;
+        string m_RescanPrompt = string.Empty;
 
         public void Configure(
             GameStateManager gameStateManager,
@@ -114,7 +115,11 @@ namespace PhasmophobiAR.UI
                 m_StartInvestigationButton.gameObject.SetActive(false);
 
             if (m_InstructionText != null && phase == GamePhase.RoomScan)
+            {
                 m_InstructionText.gameObject.SetActive(true);
+                if (!string.IsNullOrEmpty(m_RescanPrompt))
+                    m_InstructionText.text = m_RescanPrompt;
+            }
         }
 
         void OnScanUpdated(RoomScanController.ScanSnapshot snapshot)
@@ -137,7 +142,7 @@ namespace PhasmophobiAR.UI
 
             if (m_InstructionText != null)
             {
-                m_InstructionText.text = GetPlayerInstruction(snapshot);
+                m_InstructionText.text = GetPlayerInstruction(snapshot, m_RescanPrompt);
                 m_InstructionText.gameObject.SetActive(!snapshot.isReady);
             }
 
@@ -179,10 +184,13 @@ namespace PhasmophobiAR.UI
             }
         }
 
-        static string GetPlayerInstruction(RoomScanController.ScanSnapshot snapshot)
+        static string GetPlayerInstruction(RoomScanController.ScanSnapshot snapshot, string rescanPrompt)
         {
             if (snapshot.isReady)
                 return "Room mapped";
+
+            if (!string.IsNullOrEmpty(rescanPrompt))
+                return rescanPrompt;
 
             if (snapshot.confidence == TrackingConfidence.Unavailable || snapshot.confidence == TrackingConfidence.Poor)
                 return "Move slowly — keep surfaces in view";
@@ -202,7 +210,11 @@ namespace PhasmophobiAR.UI
                 return;
 
             if (m_GameStateManager != null)
+            {
                 m_GameStateManager.PhaseChanged += OnPhaseChanged;
+                m_GameStateManager.RoomScanPromptChanged += OnRoomScanPromptChanged;
+                OnRoomScanPromptChanged(m_GameStateManager.RoomScanPrompt);
+            }
 
             if (m_RoomScanController != null)
                 m_RoomScanController.ScanUpdated += OnScanUpdated;
@@ -219,7 +231,10 @@ namespace PhasmophobiAR.UI
                 return;
 
             if (m_GameStateManager != null)
+            {
                 m_GameStateManager.PhaseChanged -= OnPhaseChanged;
+                m_GameStateManager.RoomScanPromptChanged -= OnRoomScanPromptChanged;
+            }
 
             if (m_RoomScanController != null)
                 m_RoomScanController.ScanUpdated -= OnScanUpdated;
@@ -228,6 +243,20 @@ namespace PhasmophobiAR.UI
                 m_StartInvestigationButton.onClick.RemoveListener(m_RoomScanController.ConfirmScan);
 
             m_IsSubscribed = false;
+        }
+
+        void OnRoomScanPromptChanged(string prompt)
+        {
+            m_RescanPrompt = prompt ?? string.Empty;
+
+            if (m_InstructionText != null
+                && m_GameStateManager != null
+                && m_GameStateManager.CurrentPhase == GamePhase.RoomScan
+                && !string.IsNullOrEmpty(m_RescanPrompt))
+            {
+                m_InstructionText.text = m_RescanPrompt;
+                m_InstructionText.gameObject.SetActive(true);
+            }
         }
     }
 }

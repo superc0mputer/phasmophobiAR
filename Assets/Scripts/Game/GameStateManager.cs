@@ -28,6 +28,7 @@ namespace PhasmophobiAR.Game
         GamePhase m_CurrentPhase;
         bool m_HasCompletedRoomScan;
         RoomScanResult m_LastRoomScanResult;
+        string m_RoomScanPrompt = string.Empty;
         RoundResult m_LastRoundResult;
         CaptureOutcome m_LastCaptureOutcome = CaptureOutcome.None;
         float m_LastCaptureProgress;
@@ -37,11 +38,14 @@ namespace PhasmophobiAR.Game
         public event Action<GamePhase> PhaseChanged;
         public event Action ScanCompleted;
         public event Action<RoomScanResult> ScanCompletedWithResult;
+        public event Action RoomRescanRequested;
+        public event Action<string> RoomScanPromptChanged;
         public event Action<RoundResult> ResultPrepared;
 
         public GamePhase CurrentPhase => m_CurrentPhase;
         public bool HasCompletedRoomScan => m_HasCompletedRoomScan;
         public RoomScanResult LastRoomScanResult => m_LastRoomScanResult;
+        public string RoomScanPrompt => m_RoomScanPrompt;
         public bool CanPlaceTools => m_CurrentPhase == GamePhase.Investigation;
         public bool CanCaptureGhost => m_CurrentPhase == GamePhase.Investigation;
         public RoundResult LastRoundResult => m_LastRoundResult;
@@ -101,12 +105,30 @@ namespace PhasmophobiAR.Game
             if (m_HasCompletedRoomScan)
                 return;
 
+            SetRoomScanPrompt(null);
             m_HasCompletedRoomScan = true;
             m_LastRoomScanResult = scanResult;
+            SetPhase(GamePhase.Investigation);
             m_ScanCompleted.Invoke();
             ScanCompleted?.Invoke();
+            if (!m_HasCompletedRoomScan)
+                return;
+
             ScanCompletedWithResult?.Invoke(m_LastRoomScanResult);
-            SetPhase(GamePhase.Investigation);
+        }
+
+        public void RequestRoomRescan(string prompt)
+        {
+            m_HasCompletedRoomScan = false;
+            m_LastRoomScanResult = null;
+            m_LastRoundResult = null;
+            ResetCaptureOutcome();
+            ResetRoundState();
+            SetRoomScanPrompt(string.IsNullOrWhiteSpace(prompt)
+                ? "No safe ghost spawn was found. Scan the room again."
+                : prompt);
+            RoomRescanRequested?.Invoke();
+            SetPhase(GamePhase.RoomScan);
         }
 
         public void ShowResult()
@@ -141,6 +163,7 @@ namespace PhasmophobiAR.Game
             m_HasCompletedRoomScan = false;
             m_LastRoomScanResult = null;
             m_LastRoundResult = null;
+            SetRoomScanPrompt(null);
             ResetCaptureOutcome();
             ResetRoundState();
             SetPhase(GamePhase.Setup);
@@ -234,6 +257,16 @@ namespace PhasmophobiAR.Game
         {
             m_PhaseChanged.Invoke(m_CurrentPhase);
             PhaseChanged?.Invoke(m_CurrentPhase);
+        }
+
+        void SetRoomScanPrompt(string prompt)
+        {
+            var nextPrompt = prompt ?? string.Empty;
+            if (m_RoomScanPrompt == nextPrompt)
+                return;
+
+            m_RoomScanPrompt = nextPrompt;
+            RoomScanPromptChanged?.Invoke(m_RoomScanPrompt);
         }
     }
 }
